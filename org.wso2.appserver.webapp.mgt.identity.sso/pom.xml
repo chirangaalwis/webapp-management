@@ -53,9 +53,12 @@
                 </executions>
                 <configuration>
                     <artifactSet>
-                        <includes>
-                            <include>commons-lang:commons-lang</include>
-                        </includes>
+                        <excludes>
+                            <exclude>org.apache.tomcat:catalina</exclude>
+                            <exclude>org.apache.tomcat:coyote</exclude>
+                            <exclude>org.apache.tomcat:servlet-api</exclude>
+                            <exclude>org.bouncycastle:bcprov-jdk15on</exclude>
+                        </excludes>
                     </artifactSet>
                     <finalName>${project.artifactId}.dependencies</finalName>
                 </configuration>
@@ -79,6 +82,12 @@
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
+        </dependency>
+
+        <!-- TODO:Added in order to provide LoggerFactory class during the execution of the resultant jar -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
 

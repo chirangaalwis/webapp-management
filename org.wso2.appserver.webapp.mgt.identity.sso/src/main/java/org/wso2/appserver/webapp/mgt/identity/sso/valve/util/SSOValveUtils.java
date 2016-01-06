@@ -13,9 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.valve;
+package org.wso2.appserver.webapp.mgt.identity.sso.valve.util;
 
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
+import org.wso2.appserver.webapp.mgt.identity.sso.valve.SSOValveConstants;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,7 +28,7 @@ import java.util.Properties;
  *
  * @since 6.0.0
  */
-public class SSOUtils {
+public class SSOValveUtils {
     /**
      * Returns a {@code Path} instance representing the Apache Tomcat distribution home.
      *
@@ -35,7 +36,7 @@ public class SSOUtils {
      * @throws SSOException if CATALINA_HOME environmental variable has not been set
      */
     public static Path getTomcatHome() throws SSOException {
-        String envVariableValue = System.getProperty(WebappSSOConstants.CATALINA_HOME);
+        String envVariableValue = System.getProperty(SSOValveConstants.CATALINA_HOME);
         if (Optional.ofNullable(envVariableValue).isPresent()) {
             return Paths.get(envVariableValue);
         } else {
@@ -50,7 +51,7 @@ public class SSOUtils {
      * @throws SSOException if CATALINA_HOME environmental variable has not been set
      */
     public static Path getTomcatConfigurationHome() throws SSOException {
-        return Paths.get(getTomcatHome().toString(), WebappSSOConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
+        return Paths.get(getTomcatHome().toString(), SSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
     }
 
     /**
@@ -86,8 +87,8 @@ public class SSOUtils {
     public static String generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
         if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).
                 isPresent())) {
-            return ssoSPConfigProperties.getProperty(WebappSSOConstants.APP_SERVER_URL) + contextPath +
-                    ssoSPConfigProperties.getProperty(WebappSSOConstants.CONSUMER_URL_POSTFIX);
+            return ssoSPConfigProperties.getProperty(SSOValveConstants.APP_SERVER_URL) + contextPath +
+                    ssoSPConfigProperties.getProperty(SSOValveConstants.CONSUMER_URL_POSTFIX);
         } else {
             return null;
         }

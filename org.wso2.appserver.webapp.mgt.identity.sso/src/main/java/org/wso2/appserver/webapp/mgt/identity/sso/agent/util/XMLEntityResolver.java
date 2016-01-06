@@ -13,23 +13,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso;
+package org.wso2.appserver.webapp.mgt.identity.sso.agent.util;
 
-import javax.servlet.ServletException;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
+
+//  TODO: comments to be written, refactoring and use case
 
 /**
- * This class defines a custom exception type which is used within the implementation of the single-sign-on (SSO).
- * </p>
- * This class extends the {@code javax.servlet.ServletException} class.
- *
- * @since 6.0.0
+ * A test doc
  */
-public class SSOException extends ServletException {
-    public SSOException(String message) {
-        super(message);
-    }
-
-    public SSOException(String message, Throwable rootCause) {
-        super(message, rootCause);
+public class XMLEntityResolver implements EntityResolver {
+    @Override
+    public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
+        throw new SAXException("AuthnRequest contains invalid elements. Possibly an XML External Entity (XXE) attack.");
     }
 }

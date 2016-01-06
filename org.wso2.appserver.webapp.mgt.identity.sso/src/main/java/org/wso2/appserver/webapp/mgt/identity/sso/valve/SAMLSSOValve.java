@@ -19,7 +19,13 @@ import org.apache.catalina.authenticator.SingleSignOn;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.bean.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentRequestResolver;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.saml.SAML2SSOManager;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.util.SSOAgentUtils;
+import org.wso2.appserver.webapp.mgt.identity.sso.valve.model.RelayState;
+import org.wso2.appserver.webapp.mgt.identity.sso.valve.util.SSOValveUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +37,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpSession;
 
 /**
  * This class implements an Apache Tomcat valve, which performs SAML 2.0 single-sign-on function.
@@ -50,17 +57,17 @@ public class SAMLSSOValve extends SingleSignOn {
     }
 
     public SAMLSSOValve() throws SSOException {
-        logger.log(Level.INFO, "Initializing SAMLSSOValve...");
+        getLogger().log(Level.INFO, "Initializing SAMLSSOValve...");
 
         Path ssoSPConfigFilePath = Paths.
-                get(SSOUtils.getTomcatConfigurationHome().toString(), WebappSSOConstants.SSO_CONFIG_FILE_NAME);
+                get(SSOValveUtils.getTomcatConfigurationHome().toString(), SSOValveConstants.SSO_CONFIG_FILE_NAME);
 
         //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
         if (Files.exists(ssoSPConfigFilePath)) {
             try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
                 getSSOSPConfigProperties().load(fileInputStream);
-                logger.log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
-                        "data from sso-sp-config.properties file.");
+                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration "
+                        + "data from sso-sp-config.properties file.");
             } catch (IOException e) {
                 throw new SSOException("Error when loading global single-sign-on configuration data " +
                         "from sso-sp-config.properties file.");
@@ -68,6 +75,10 @@ public class SAMLSSOValve extends SingleSignOn {
         } else {
             throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
         }
+    }
+
+    public static Logger getLogger() {
+        return logger;
     }
 
     public Properties getSSOSPConfigProperties() {
@@ -83,20 +94,20 @@ public class SAMLSSOValve extends SingleSignOn {
      * </p>
      * This method overrides the parent {@link SingleSignOn} class' invoke() method.
      *
-     * @param request  The servlet request processed
-     * @param response The servlet response generated
+     * @param request  the servlet request processed
+     * @param response the servlet response generated
      * @throws IOException      if an input/output error occurs
      * @throws ServletException if a servlet error occurs
      */
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
-        logger.log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
+        getLogger().log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
 
         Properties configurationProperties = getSSOSPConfigProperties();
 
         //  Checks if SAML 2.0 single-sign-on valve is enabled in the context-param
-        if (!(Boolean.parseBoolean(request.getContext().findParameter(WebappSSOConstants.ENABLE_SAML2_SSO)))) {
-            logger.log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
+        if (!(Boolean.parseBoolean(request.getContext().findParameter(SSOValveConstants.ENABLE_SAML2_SSO)))) {
+            getLogger().log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
             //  Moves onto the next valve, if SAML2 SSO valve is not enabled
             getNext().invoke(request, response);
             return;
@@ -104,31 +115,86 @@ public class SAMLSSOValve extends SingleSignOn {
 
         SSOAgentConfiguration ssoAgentConfiguration;
         Optional ssoAgent = Optional.ofNullable(request.getSessionInternal().
-                getNote(WebappSSOConstants.SSO_AGENT_CONFIG));
+                getNote(SSOValveConstants.SSO_AGENT_CONFIG));
         if (!ssoAgent.isPresent()) {
             try {
-                //  Construct a new SSOAgentConfiguration instance
+                //  Constructs a new SSOAgentConfiguration instance
                 ssoAgentConfiguration = new SSOAgentConfiguration();
                 ssoAgentConfiguration.initConfig(configurationProperties);
 
                 //  TODO: user model, X.509 certificate handling
 
-                Optional.ofNullable(SSOUtils.generateIssuerID(request.getContextPath())).
+                Optional.ofNullable(SSOValveUtils.generateIssuerID(request.getContextPath())).
                         ifPresent(ssoAgentConfiguration.getSAML2()::setSPEntityId);
-                Optional.ofNullable(SSOUtils.generateConsumerUrl(request.getContextPath(), configurationProperties)).
+                Optional.ofNullable(
+                        SSOValveUtils.generateConsumerUrl(request.getContextPath(), configurationProperties)).
                         ifPresent(ssoAgentConfiguration.getSAML2()::setACSURL);
                 ssoAgentConfiguration.verifyConfig();
 
-                request.getSessionInternal().setNote(WebappSSOConstants.SSO_AGENT_CONFIG, ssoAgentConfiguration);
+                request.getSessionInternal().setNote(SSOValveConstants.SSO_AGENT_CONFIG, ssoAgentConfiguration);
             } catch (SSOException e) {
-                logger.log(Level.SEVERE, "Error on initializing SAML2SSOManager", e);
+                getLogger().log(Level.SEVERE, "Error on initializing SAML2SSOManager", e);
                 return;
             }
         } else {
             ssoAgentConfiguration = (SSOAgentConfiguration) ssoAgent.get();
         }
 
-        logger.log(Level.FINE, ssoAgentConfiguration.getOAuth2SAML2GrantURL());
+        SSOAgentRequestResolver requestResolver = new SSOAgentRequestResolver(request, ssoAgentConfiguration);
+
+        //  If the request URL matches one of the URL(s) to skip, moves on to the next valve
+        if (requestResolver.isURLToSkip()) {
+            getLogger().log(Level.FINE, "Request matched a skip URL. Skipping...");
+            getNext().invoke(request, response);
+            return;
+        }
+
+        SAML2SSOManager saml2SSOManager;
+        HttpSession session = request.getSession(false);
+
+        if (requestResolver.isSLORequest()) {
+
+        } else if (requestResolver.isSAML2SSOResponse()) {
+            //  Handles either a SAML 2.0 Response for a SSO SAML 2.0 Request by the client application
+            //  or a SAML 2.0 Response for a SLO SAML 2.0 Request from a service provider
+            getLogger().log(Level.FINE, "Processing SSO Response.");
+            saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
+
+            //  TODO: process SLO
+            //  reads the redirect path, has to be read before the session get invalidated as it first
+            //  tries to read the redirect path form the session attribute
+//            String redirectPath = readAndForgetRedirectPathAfterSLO(request);
+            saml2SSOManager.processResponse(request);
+
+        } else if (requestResolver.isSLOURL()) {
+
+        } else if ((requestResolver.isSAML2SSOURL()) || ((!Optional.ofNullable(session).isPresent()) || (!Optional.
+                ofNullable(session.getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).isPresent()))) {
+            //  Handles the unauthenticated requests for all contexts
+            getLogger().log(Level.FINE, "Processing SSO URL");
+            saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
+
+            String relayStateId = SSOAgentUtils.createID();
+            RelayState relayState = new RelayState();
+            relayState.setRequestedURL(request.getRequestURI());
+            relayState.setRequestQueryString(request.getQueryString());
+            relayState.setRequestParameters(request.getParameterMap());
+            ssoAgentConfiguration.getSAML2().setRelayState(relayStateId);
+
+            if (Optional.ofNullable(session).isPresent()) {
+                session.setAttribute(relayStateId, relayState);
+            }
+
+            ssoAgentConfiguration.getSAML2().setPassiveAuthn(false);
+            if (requestResolver.isHttpPostBinding()) {
+                String htmlPayload = saml2SSOManager.buildPostRequest(request, false);
+                SSOAgentUtils.sendCharacterData(response, htmlPayload);
+            } else {
+                //  TODO: test redirect
+//                response.sendRedirect(saml2SSOManager.buildRedirectRequest(request, false));
+            }
+            return;
+        }
 
         //  Moves onto the next valve
         getNext().invoke(request, response);

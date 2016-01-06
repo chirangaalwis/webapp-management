@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent.bean;
+package org.wso2.appserver.webapp.mgt.identity.sso.agent.model;
 
 import org.apache.commons.lang.StringUtils;
 import org.opensaml.common.xml.SAMLConstants;
@@ -62,6 +62,10 @@ public class SSOAgentConfiguration {
         setSkipURIs(new HashSet<>());
         setSAML2(new SAML2());
         setOAuth2(new OAuth2());
+    }
+
+    public static Logger getLogger() {
+        return logger;
     }
 
     public Boolean isSAML2SSOLoginEnabled() {
@@ -140,8 +144,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isSAML2SSOLoginEnabledString).isPresent()) {
                 setSAML2SSOLoginEnabled(Boolean.parseBoolean(isSAML2SSOLoginEnabledString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.ENABLE_SAML2_SSO_LOGIN +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.ENABLE_SAML2_SSO_LOGIN +
+                        " not configured. Defaulting to \'false\'.");
                 setSAML2SSOLoginEnabled(false);
             }
 
@@ -150,8 +154,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isSAML2OAuth2GrantEnabledString).isPresent()) {
                 setOAuth2SAML2GrantEnabled(Boolean.parseBoolean(isSAML2OAuth2GrantEnabledString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT +
+                        " not configured. Defaulting to \'false\'.");
                 setOAuth2SAML2GrantEnabled(false);
             }
 
@@ -162,18 +166,17 @@ public class SSOAgentConfiguration {
             String skipURIsString = configProperties.getProperty(SSOAgentConstants.SSOAgentConfiguration.SKIP_URIS);
             if (!StringUtils.isBlank(skipURIsString)) {
                 String[] skipURIArray = skipURIsString.split(",");
-                Stream.of(skipURIArray).forEach(skipURIs::add);
+                Stream.of(skipURIArray).forEach(getSkipURIs()::add);
             }
 
-            String queryParametersString = configProperties.
+            String queryParameterString = configProperties.
                     getProperty(SSOAgentConstants.SSOAgentConfiguration.QUERY_PARAMS);
-            if (!StringUtils.isBlank(queryParametersString)) {
-                String[] queryParameters = queryParametersString.split("&");
+            if (!StringUtils.isBlank(queryParameterString)) {
                 Map<String, List<String>> queryParameterMap = new HashMap<>();
-                Stream.of(queryParameters).forEach(queryParameter -> {
+                Stream.of(queryParameterString.split("&")).forEach(queryParameter -> {
                     String[] splitParameters = queryParameter.split("=");
                     if (splitParameters.length == 2) {
-                        if (queryParameterMap.get(splitParameters[0]) != null) {
+                        if (Optional.ofNullable(queryParameterMap.get(splitParameters[0])).isPresent()) {
                             queryParameterMap.get(splitParameters[0]).add(splitParameters[1]);
                         } else {
                             List<String> newList = new ArrayList<>();
@@ -183,7 +186,7 @@ public class SSOAgentConfiguration {
                     }
                     queryParameterMap.entrySet().forEach(entry -> {
                         String[] values = entry.getValue().toArray(new String[entry.getValue().size()]);
-                        this.queryParameters.put(entry.getKey(), values);
+                        getQueryParameters().put(entry.getKey(), values);
                     });
                 });
             }
@@ -193,8 +196,8 @@ public class SSOAgentConfiguration {
                     getProperty(SSOAgentConstants.SSOAgentConfiguration.SAML2.HTTP_BINDING));
             if ((!Optional.ofNullable(saml2Instance.getHttpBinding()).isPresent()) || saml2Instance.getHttpBinding().
                     isEmpty()) {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.HTTP_BINDING +
-                        " not configured. Defaulting to \'" + SAMLConstants.SAML2_POST_BINDING_URI + "\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.HTTP_BINDING +
+                        " not configured. Defaulting to \'" + SAMLConstants.SAML2_POST_BINDING_URI + "\'.");
                 saml2Instance.setHttpBinding(SAMLConstants.SAML2_POST_BINDING_URI);
             }
             saml2Instance.setSPEntityId(configProperties.
@@ -213,8 +216,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isSLOEnabledString).isPresent()) {
                 saml2Instance.setSLOEnabled(Boolean.parseBoolean(isSLOEnabledString));
             } else {
-                logger.log(Level.INFO, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_SLO +
-                        "\' not configured. Defaulting to \'false\'");
+                getLogger().log(Level.INFO, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_SLO +
+                        "\' not configured. Defaulting to \'false\'.");
                 saml2Instance.setSLOEnabled(false);
             }
             saml2Instance.
@@ -225,8 +228,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isAssertionSignedString).isPresent()) {
                 saml2Instance.setAssertionSigned(Boolean.parseBoolean(isAssertionSignedString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_ASSERTION_SIGNING +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_ASSERTION_SIGNING +
+                        " not configured. Defaulting to \'false\'.");
                 saml2Instance.setAssertionSigned(false);
             }
 
@@ -235,8 +238,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isAssertionEncryptedString).isPresent()) {
                 saml2Instance.setAssertionEncrypted(Boolean.parseBoolean(isAssertionEncryptedString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_ASSERTION_ENCRYPTION +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_ASSERTION_ENCRYPTION +
+                        " not configured. Defaulting to \'false\'.");
                 saml2Instance.setAssertionEncrypted(false);
             }
 
@@ -245,8 +248,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isResponseSignedString).isPresent()) {
                 saml2Instance.setResponseSigned(Boolean.parseBoolean(isResponseSignedString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_RESPONSE_SIGNING +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_RESPONSE_SIGNING +
+                        " not configured. Defaulting to \'false\'.");
                 saml2Instance.setResponseSigned(false);
             }
 
@@ -256,7 +259,7 @@ public class SSOAgentConfiguration {
                 if (Optional.ofNullable(signatureValidatorImplClass).isPresent()) {
                     saml2Instance.setSignatureValidatorImplClass(signatureValidatorImplClass);
                 } else {
-                    logger.log(Level.FINE,
+                    getLogger().log(Level.FINE,
                             SSOAgentConstants.SSOAgentConfiguration.SAML2.SIGNATURE_VALIDATOR + " not configured.");
                 }
             }
@@ -266,8 +269,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isRequestSignedString).isPresent()) {
                 saml2Instance.setRequestSigned(Boolean.parseBoolean(isRequestSignedString));
             } else {
-                logger.log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_REQUEST_SIGNING +
-                        " not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, SSOAgentConstants.SSOAgentConfiguration.SAML2.ENABLE_REQUEST_SIGNING +
+                        " not configured. Defaulting to \'false\'.");
                 saml2Instance.setRequestSigned(false);
             }
 
@@ -276,8 +279,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isPassiveAuthenticationEnabledString).isPresent()) {
                 saml2Instance.setPassiveAuthn(Boolean.parseBoolean(isPassiveAuthenticationEnabledString));
             } else {
-                logger.log(Level.FINE, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.IS_PASSIVE_AUTHN +
-                        "\' not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.IS_PASSIVE_AUTHN +
+                        "\' not configured. Defaulting to \'false\'.");
                 saml2Instance.setPassiveAuthn(false);
             }
 
@@ -286,8 +289,8 @@ public class SSOAgentConfiguration {
             if (Optional.ofNullable(isForceAuthenticationEnabledString).isPresent()) {
                 saml2Instance.setForceAuthn(Boolean.parseBoolean(isForceAuthenticationEnabledString));
             } else {
-                logger.log(Level.FINE, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.IS_FORCE_AUTHN +
-                        "\' not configured. Defaulting to \'false\'");
+                getLogger().log(Level.FINE, "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.IS_FORCE_AUTHN +
+                        "\' not configured. Defaulting to \'false\'.");
                 saml2Instance.setForceAuthn(false);
             }
 
@@ -316,51 +319,51 @@ public class SSOAgentConfiguration {
     public void verifyConfig() throws SSOException {
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(getSAML2SSOURL()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.SAML2_SSO_URL + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.SAML2_SSO_URL + "\' not configured.");
         }
 
         if (!isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled()) {
-            throw new SSOException("SAML2 SSO Login is disabled. Cannot use SAML2 Bearer Grant type for OAuth2");
+            throw new SSOException("SAML2 SSO Login is disabled. Cannot use SAML2 Bearer Grant type for OAuth2.");
         }
 
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() && (!Optional.ofNullable(getOAuth2SAML2GrantURL()).
                 isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.OAUTH2_SAML2_GRANT_URL + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.OAUTH2_SAML2_GRANT_URL + "\' not configured.");
         }
 
         SAML2 saml2Instance = getSAML2();
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(saml2Instance.getSPEntityId()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.SAML2.SP_ENTITY_ID + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.SAML2.SP_ENTITY_ID + "\' not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(saml2Instance.getACSURL()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.SAML2.ACS_URL + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.SAML2.ACS_URL + "\' not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(saml2Instance.getIdPEntityId()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.SAML2.IDP_ENTITY_ID + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.SAML2.IDP_ENTITY_ID + "\' not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(saml2Instance.getIdPURL()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOAgentConstants.SSOAgentConfiguration.SAML2.IDP_URL + "\' not configured");
+                    SSOAgentConstants.SSOAgentConfiguration.SAML2.IDP_URL + "\' not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(saml2Instance.getAttributeConsumingServiceIndex()).
                 isPresent())) {
-            logger.log(Level.FINE,
+            getLogger().log(Level.FINE,
                     "\'" + SSOAgentConstants.SSOAgentConfiguration.SAML2.ATTRIBUTE_CONSUMING_SERVICE_INDEX +
-                            "\' not configured. No attributes of the Subject will be requested");
+                            "\' not configured. No attributes of the Subject will be requested.");
         }
 
         if (isSAML2SSOLoginEnabled() && saml2Instance.isSLOEnabled() && (!Optional.ofNullable(saml2Instance.
                 getSLOURL()).isPresent())) {
-            throw new SSOException("Single Logout enabled, but SLO URL not configured");
+            throw new SSOException("Single Logout enabled, but SLO URL not configured.");
         }
 
         // TODO: SSOAgentX509Credential has to be considered
@@ -369,7 +372,7 @@ public class SSOAgentConfiguration {
                 (saml2Instance.isAssertionSigned() ||
                 saml2Instance.isAssertionEncrypted() || saml2Instance.isResponseSigned() ||
                         saml2Instance.isRequestSigned()) && saml2.ssoAgentX509Credential == null) {
-            logger.log(Level.FINE,
+            getLogger().log(Level.FINE,
                     "\'SSOAgentX509Credential\' not configured. Defaulting to " + SSOAgentCarbonX509Credential.class
                             .getName());
         }
