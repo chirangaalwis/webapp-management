@@ -20,6 +20,7 @@ import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.Properties;
 
 /**
  * This class contains utility methods of the implementation of the SAML 2.0 single-sign-on valve.
@@ -50,5 +51,45 @@ public class SSOUtils {
      */
     public static Path getTomcatConfigurationHome() throws SSOException {
         return Paths.get(getTomcatHome().toString(), WebappSSOConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
+    }
+
+    /**
+     * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
+     * </p>
+     * If context path is null, a null value is returned.
+     *
+     * @param contextPath the context path of the service provider application
+     * @return a unique id value for the SAML 2.0 service provider application based on its context path
+     */
+    public static String generateIssuerID(String contextPath) {
+        if (Optional.ofNullable(contextPath).isPresent()) {
+            String issuerId = contextPath.replaceFirst("/webapps", "").replace("/", "_");
+            if (issuerId.startsWith("_")) {
+                issuerId = issuerId.substring(1);
+            }
+            return issuerId;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Returns a SAML 2.0 Assertion Consumer URL based on service provider application context path.
+     * </p>
+     * If context path or the list of configuration properties is/are null, null is returned.
+     *
+     * @param contextPath           the context path of the service provider application
+     * @param ssoSPConfigProperties the global single-sign-on configuration properties
+     * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path,
+     * returns null if context path or the list of configuration properties is/are null
+     */
+    public static String generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
+        if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).
+                isPresent())) {
+            return ssoSPConfigProperties.getProperty(WebappSSOConstants.APP_SERVER_URL) + contextPath +
+                    ssoSPConfigProperties.getProperty(WebappSSOConstants.CONSUMER_URL_POSTFIX);
+        } else {
+            return null;
+        }
     }
 }

@@ -24,6 +24,13 @@
         <processorPath useClasspath="true" />
         <module name="org.wso2.appserver.webapp.authenticator" />
       </profile>
+      <profile default="false" name="Annotation profile for org.wso2.appserver.webapp.mgt.identity.sso" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="true" />
+        <module name="org.wso2.appserver.webapp.mgt.identity.sso" />
+      </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="org.wso2.appserver.webapp.authenticator" target="1.8" />

@@ -23,7 +23,14 @@ package org.wso2.appserver.webapp.mgt.identity.sso.valve;
 public class WebappSSOConstants {
     //  environmental variable property name constant
     protected static final String CATALINA_HOME = "catalina.home";
+    //  context parameter property name constant
+    protected static final String ENABLE_SAML2_SSO = "enable.saml2.sso";
     //  file path related constants
     protected static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
     protected static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
+    //  http servlet request session notes' property name and attribute name constants
+    protected static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
+    //  sso configuration property name constants
+    protected static final String APP_SERVER_URL = "ApplicationServerURL";
+    protected static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
 }

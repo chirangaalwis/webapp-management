@@ -15,13 +15,17 @@
  */
 package org.wso2.appserver.webapp.mgt.identity.sso;
 
+import javax.servlet.ServletException;
+
 /**
  * This class defines a custom exception type which is used within the implementation of the
  * single-sign-on (SSO).
+ * </p>
+ * This class extends the {@code javax.servlet.ServletException} class.
  *
  * @since 6.0.0
  */
-public class SSOException extends Exception {
+public class SSOException extends ServletException {
     public SSOException(String message) {
         super(message);
     }
