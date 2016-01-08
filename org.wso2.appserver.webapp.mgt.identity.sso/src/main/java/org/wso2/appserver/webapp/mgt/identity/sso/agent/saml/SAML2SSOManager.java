@@ -19,14 +19,7 @@ import org.joda.time.DateTime;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.common.Extensions;
-import org.opensaml.saml2.core.AuthnContextClassRef;
-import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.Issuer;
-import org.opensaml.saml2.core.LogoutResponse;
-import org.opensaml.saml2.core.NameIDPolicy;
-import org.opensaml.saml2.core.RequestAbstractType;
-import org.opensaml.saml2.core.RequestedAuthnContext;
+import org.opensaml.saml2.core.*;
 import org.opensaml.saml2.core.impl.AuthnContextClassRefBuilder;
 import org.opensaml.saml2.core.impl.AuthnRequestBuilder;
 import org.opensaml.saml2.core.impl.IssuerBuilder;
@@ -34,16 +27,26 @@ import org.opensaml.saml2.core.impl.NameIDPolicyBuilder;
 import org.opensaml.saml2.core.impl.RequestedAuthnContextBuilder;
 import org.opensaml.saml2.ecp.RelayState;
 import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.io.Marshaller;
+import org.opensaml.xml.io.MarshallerFactory;
+import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.util.Base64;
+import org.w3c.dom.Element;
+import org.w3c.dom.bootstrap.DOMImplementationRegistry;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSOutput;
+import org.w3c.dom.ls.LSSerializer;
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.LoggedInSessionBean;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.util.SSOAgentUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 import javax.servlet.http.HttpServletRequest;
 
@@ -52,6 +55,8 @@ import javax.servlet.http.HttpServletRequest;
  * within the SAML 2.0 single-sign-on process.
  */
 public class SAML2SSOManager {
+    private static final Logger logger = Logger.getLogger(SSOAgentUtils.class.getName());
+
     private SSOAgentConfiguration ssoAgentConfiguration;
 
     public SAML2SSOManager(SSOAgentConfiguration ssoAgentConfiguration) throws SSOException {
@@ -59,6 +64,10 @@ public class SAML2SSOManager {
         //  TODO: uncomment later
 //        loadCustomSignatureValidatorClass();
         SSOAgentUtils.doBootstrap();
+    }
+
+    public static Logger getLogger() {
+        return logger;
     }
 
     private void setSSOAgentConfig(SSOAgentConfiguration ssoAgentConfiguration) {
@@ -161,8 +170,8 @@ public class SAML2SSOManager {
             }
             String relayState = request.getParameter(RelayState.DEFAULT_ELEMENT_LOCAL_NAME);
 
-            if ((Optional.ofNullable(relayState).isPresent()) && !relayState.isEmpty() && !"null"
-                    .equalsIgnoreCase(relayState)) {
+            if ((Optional.ofNullable(relayState).isPresent()) && !relayState.isEmpty() && !(("null").
+                    equalsIgnoreCase(relayState))) {
                 //  Additional checks for incompetent IdPs
                 getSSOAgentConfig().getSAML2().setRelayState(relayState);
             }
@@ -174,7 +183,122 @@ public class SAML2SSOManager {
 
     //  TODO: add java doc comments
     private void processSSOResponse(HttpServletRequest request) throws SSOException {
+        LoggedInSessionBean sessionBean = new LoggedInSessionBean();
+        sessionBean.setSAML2SSO(new LoggedInSessionBean.SAML2SSO());
 
+        String saml2ResponseString = new String(
+                Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
+                Charset.forName("UTF-8"));
+        Response saml2Response = (Response) SSOAgentUtils.unmarshall(saml2ResponseString);
+        sessionBean.getSAML2SSO().setResponseString(saml2ResponseString);
+        sessionBean.getSAML2SSO().setSAMLResponse(saml2Response);
+
+        Optional<Assertion> assertion = Optional.empty();
+        if (getSSOAgentConfig().getSAML2().isAssertionEncrypted()) {
+            //  TODO: to be completed under assertion signing
+        } else {
+            List<Assertion> assertions = saml2Response.getAssertions();
+            if ((Optional.ofNullable(assertions).isPresent()) && (!assertions.isEmpty())) {
+                assertion = Optional.of(assertions.get(0));
+            }
+        }
+        if (!Optional.ofNullable(assertion).isPresent()) {
+            if (isNoPassive(saml2Response)) {
+                getLogger().log(Level.FINE, "Cannot authenticate in passive mode.");
+                return;
+            }
+            throw new SSOException("SAML2 Assertion not found in the Response.");
+        }
+
+        String idPEntityIdValue = assertion.get().getIssuer().getValue();
+        if ((!Optional.ofNullable(idPEntityIdValue).isPresent()) || (idPEntityIdValue.isEmpty())) {
+            throw new SSOException("SAML2 Response does not contain an Issuer value.");
+        } else if (!idPEntityIdValue.equals(getSSOAgentConfig().getSAML2().getIdPEntityId())) {
+            throw new SSOException("SAML2 Response Issuer verification failed.");
+        }
+        sessionBean.getSAML2SSO().setAssertion(assertion.get());
+        //  Cannot marshall SAML assertion here, before signature validation due to an issue in OpenSAML
+
+        //  Get the subject name from the Response Object and forward it to login_action.jsp
+        Optional<String> subject = Optional.empty();
+        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional.
+                ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
+            subject = Optional.of(assertion.get().getSubject().getNameID().getValue());
+        }
+        if (!subject.isPresent()) {
+            throw new SSOException("SAML2 Response does not contain the name of the subject.");
+        }
+
+        //  Sets the subject in the session bean
+        sessionBean.getSAML2SSO().setSubjectId(subject.get());
+        request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
+
+        // validate audience restriction
+        validateAudienceRestriction(assertion.get());
+
+        // validate signature
+//        validateSignature(saml2Response, assertion);
+
+        // Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
+        sessionBean.getSAML2SSO().setAssertionString(marshall(assertion.get()));
+
+        ((LoggedInSessionBean) request.getSession().getAttribute(
+                SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+                setSubjectAttributes(getAssertionStatements(assertion.get()));
+
+        //  TODO: Single log out code
+
+        request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
+
+    }
+
+    //  TODO: add comments, to be refactored
+    protected void validateAudienceRestriction(Assertion assertion) throws SSOException {
+/*        if (Optional.ofNullable(assertion).isPresent()) {
+            if (!Optional.ofNullable(assertion.getConditions()).isPresent()) {
+                throw new SSOException("SAML2 Response doesn't contain Conditions.");
+            } else {
+                List<AudienceRestriction> audienceRestrictions = assertion.getConditions().getAudienceRestrictions();
+                if ((!Optional.ofNullable(audienceRestrictions).isPresent()) || (audienceRestrictions.isEmpty())) {
+                    throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions.");
+                } else {
+                    audienceRestrictions.stream().forEach(audienceRestriction -> {
+
+                    });
+                }
+            }
+        }*/
+
+        if (assertion != null) {
+            Conditions conditions = assertion.getConditions();
+            if (conditions != null) {
+                List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
+                if (audienceRestrictions != null && !audienceRestrictions.isEmpty()) {
+                    boolean audienceFound = false;
+                    for (AudienceRestriction audienceRestriction : audienceRestrictions) {
+                        if (audienceRestriction.getAudiences() != null && !audienceRestriction.getAudiences().
+                                isEmpty()) {
+                            for (Audience audience : audienceRestriction.getAudiences()) {
+                                if (getSSOAgentConfig().getSAML2().getSPEntityId().equals(audience.getAudienceURI())) {
+                                    audienceFound = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (audienceFound) {
+                            break;
+                        }
+                    }
+                    if (!audienceFound) {
+                        throw new SSOException("SAML2 Assertion Audience Restriction validation failed");
+                    }
+                } else {
+                    throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions");
+                }
+            } else {
+                throw new SSOException("SAML2 Response doesn't contain Conditions");
+            }
+        }
     }
 
     /**
@@ -185,7 +309,13 @@ public class SAML2SSOManager {
      */
     private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
         //  Issuer identifies the entity that generated the request message
-        Issuer issuer = new IssuerBuilder().buildObject();
+        /*Issuer issuer = new IssuerBuilder().buildObject();
+        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());*/
+
+        IssuerBuilder issuerBuilder = new IssuerBuilder();
+        Issuer issuer =
+                issuerBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
+                        "Issuer", "samlp");
         issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
 
         //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
@@ -200,7 +330,13 @@ public class SAML2SSOManager {
 
         //  This represents a URI reference identifying an authentication context class that describes the
         //  authentication context declaration that follows
-        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
+//        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
+
+        AuthnContextClassRefBuilder authnContextClassRefBuilder = new AuthnContextClassRefBuilder();
+        AuthnContextClassRef authnContextClassRef =
+                authnContextClassRefBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
+                        "AuthnContextClassRef",
+                        "saml");
         authnContextClassRef.setAuthnContextClassRef(SSOAgentConstants.SAML2SSO.AUTH_CONTEXT_CLASS_URI_REFERENCE);
 
         //  Specifies the authentication context requirements of authentication statements returned in response
@@ -214,7 +350,12 @@ public class SAML2SSOManager {
         DateTime issueInstant = new DateTime();
 
         //  Create an AuthnRequest instance
-        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+//        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+
+        AuthnRequestBuilder authRequestBuilder = new AuthnRequestBuilder();
+        AuthnRequest authRequest =
+                authRequestBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:protocol",
+                        "AuthnRequest", "samlp");
 
         authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
         authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
@@ -241,6 +382,58 @@ public class SAML2SSOManager {
         }
 
         return authRequest;
+    }
+
+    private boolean isNoPassive(Response response) {
+        return (Optional.ofNullable(response.getStatus()).isPresent()) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getValue().equals(StatusCode.RESPONDER_URI)) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getStatusCode().getValue().equals(StatusCode.NO_PASSIVE_URI));
+    }
+
+    //  TODO: to be refactored
+    private Map<String, String> getAssertionStatements(Assertion assertion) {
+
+        Map<String, String> results = new HashMap<>();
+
+        if (assertion != null && assertion.getAttributeStatements() != null) {
+
+            List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
+
+            for (AttributeStatement statement : attributeStatementList) {
+                List<Attribute> attributesList = statement.getAttributes();
+                for (Attribute attribute : attributesList) {
+                    Element value = attribute.getAttributeValues().get(0).getDOM();
+                    String attributeValue = value.getTextContent();
+                    results.put(attribute.getName(), attributeValue);
+                }
+            }
+
+        }
+        return results;
+    }
+
+    protected String marshall(XMLObject xmlObject) throws SSOException {
+
+        try {
+            System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
+                    "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
+            MarshallerFactory marshallerFactory =
+                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            Marshaller marshaller = marshallerFactory.getMarshaller(xmlObject);
+            Element element = marshaller.marshall(xmlObject);
+            ByteArrayOutputStream byteArrayOutputStrm = new ByteArrayOutputStream();
+            DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
+            DOMImplementationLS impl = (DOMImplementationLS) registry.getDOMImplementation("LS");
+            LSSerializer writer = impl.createLSSerializer();
+            LSOutput output = impl.createLSOutput();
+            output.setByteStream(byteArrayOutputStrm);
+            writer.write(element, output);
+            return new String(byteArrayOutputStrm.toByteArray(), Charset.forName("UTF-8"));
+        } catch (ClassNotFoundException | InstantiationException | MarshallingException | IllegalAccessException e) {
+            throw new SSOException("Error in marshalling SAML2 Assertion", e);
+        }
     }
 
     /**

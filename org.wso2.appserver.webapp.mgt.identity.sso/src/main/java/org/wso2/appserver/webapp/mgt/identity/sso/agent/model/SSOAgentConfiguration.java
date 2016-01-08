@@ -44,25 +44,25 @@ public class SSOAgentConfiguration {
 
     private static final Logger logger = Logger.getLogger(SSOAgentConfiguration.class.getName());
 
-    private Boolean isSAML2SSOLoginEnabled;
-    private Boolean isOAuth2SAML2GrantEnabled;
+    private Boolean isSAML2SSOLoginEnabled = false;
+    private Boolean isOAuth2SAML2GrantEnabled = false;
 
-    private String saml2SSOURL;
-    private String oauth2SAML2GrantURL;
-    private Set<String> skipURIs;
+    private String saml2SSOURL = null;
+    private String oauth2SAML2GrantURL = null;
+    private Set<String> skipURIs = new HashSet<>();
 
-    private Map<String, String[]> queryParameters;
+    private Map<String, String[]> queryParameters = new HashMap<>();
 
-    private SAML2 saml2;
-    private OAuth2 oauth2;
+    private SAML2 saml2 = new SAML2();
+    private OAuth2 oauth2 = new OAuth2();
 
     //  An instance field initialization block
-    {
+    /*{
         setQueryParameters(new HashMap<>());
         setSkipURIs(new HashSet<>());
         setSAML2(new SAML2());
         setOAuth2(new OAuth2());
-    }
+    }*/
 
     public static Logger getLogger() {
         return logger;
@@ -411,23 +411,23 @@ public class SSOAgentConfiguration {
      * A nested class which defines the SAML 2.0 SSO configuration properties.
      */
     public static class SAML2 {
-        private String httpBinding;
-        private String spEntityId;
-        private String acsURL;
-        private String idPEntityId;
-        private String idPURL;
-        private Boolean isSLOEnabled;
-        private String sloURL;
-        private String attributeConsumingServiceIndex;
-        //        private SSOAgentX509Credential ssoAgentX509Credential;
-        private Boolean isAssertionSigned;
-        private Boolean isAssertionEncrypted;
-        private Boolean isResponseSigned;
-        private Boolean isRequestSigned;
-        private Boolean isPassiveAuthenticationEnabled;
-        private Boolean isForceAuthenticationEnabled;
-        private String relayState;
-        private String signatureValidatorImplClass;
+        private String httpBinding = null;
+        private String spEntityId = null;
+        private String acsURL = null;
+        private String idPEntityId = null;
+        private String idPURL = null;
+        private Boolean isSLOEnabled = false;
+        private String sloURL = null;
+        private String attributeConsumingServiceIndex = null;
+//        private SSOAgentX509Credential ssoAgentX509Credential = null;
+        private Boolean isAssertionSigned = false;
+        private Boolean isAssertionEncrypted = false;
+        private Boolean isResponseSigned = false;
+        private Boolean isRequestSigned = false;
+        private Boolean isPassiveAuthenticationEnabled = false;
+        private Boolean isForceAuthenticationEnabled = false;
+        private String relayState = null;
+        private String signatureValidatorImplClass = null;
         /**
          * The html page that will auto-submit the SAML2 to the IdP.
          * This should be in valid HTML syntax, with following section within the
@@ -591,9 +591,9 @@ public class SSOAgentConfiguration {
      * A nested class which defines the SSO configuration properties related to OAuth2.
      */
     public static class OAuth2 {
-        private String tokenURL;
-        private String clientId;
-        private String clientSecret;
+        private String tokenURL = null;
+        private String clientId = null;
+        private String clientSecret = null;
 
         public String getClientSecret() {
             return clientSecret;

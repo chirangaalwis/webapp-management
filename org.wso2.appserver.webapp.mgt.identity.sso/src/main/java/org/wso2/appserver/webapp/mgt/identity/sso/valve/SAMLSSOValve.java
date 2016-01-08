@@ -66,8 +66,8 @@ public class SAMLSSOValve extends SingleSignOn {
         if (Files.exists(ssoSPConfigFilePath)) {
             try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
                 getSSOSPConfigProperties().load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration "
-                        + "data from sso-sp-config.properties file.");
+                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
+                        "data from sso-sp-config.properties file.");
             } catch (IOException e) {
                 throw new SSOException("Error when loading global single-sign-on configuration data " +
                         "from sso-sp-config.properties file.");
@@ -77,7 +77,7 @@ public class SAMLSSOValve extends SingleSignOn {
         }
     }
 
-    public static Logger getLogger() {
+    private static Logger getLogger() {
         return logger;
     }
 
@@ -124,11 +124,10 @@ public class SAMLSSOValve extends SingleSignOn {
 
                 //  TODO: user model, X.509 certificate handling
 
-                Optional.ofNullable(SSOValveUtils.generateIssuerID(request.getContextPath())).
-                        ifPresent(ssoAgentConfiguration.getSAML2()::setSPEntityId);
-                Optional.ofNullable(
-                        SSOValveUtils.generateConsumerUrl(request.getContextPath(), configurationProperties)).
-                        ifPresent(ssoAgentConfiguration.getSAML2()::setACSURL);
+                Optional.of(SSOValveUtils.generateIssuerID(request.getContextPath())).
+                        ifPresent(id -> ssoAgentConfiguration.getSAML2().setSPEntityId((String) id.get()));
+                Optional.of(SSOValveUtils.generateConsumerUrl(request.getContextPath(), configurationProperties)).
+                        ifPresent(url -> ssoAgentConfiguration.getSAML2().setACSURL((String) url.get()));
                 ssoAgentConfiguration.verifyConfig();
 
                 request.getSessionInternal().setNote(SSOValveConstants.SSO_AGENT_CONFIG, ssoAgentConfiguration);
@@ -155,16 +154,48 @@ public class SAMLSSOValve extends SingleSignOn {
         if (requestResolver.isSLORequest()) {
 
         } else if (requestResolver.isSAML2SSOResponse()) {
-            //  Handles either a SAML 2.0 Response for a SSO SAML 2.0 Request by the client application
-            //  or a SAML 2.0 Response for a SLO SAML 2.0 Request from a service provider
-            getLogger().log(Level.FINE, "Processing SSO Response.");
+
+            /*if (log.isDebugEnabled()) {
+                log.debug("Processing SSO Response.");
+            }*/
+
             saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
 
-            //  TODO: process SLO
-            //  reads the redirect path, has to be read before the session get invalidated as it first
-            //  tries to read the redirect path form the session attribute
-//            String redirectPath = readAndForgetRedirectPathAfterSLO(request);
-            saml2SSOManager.processResponse(request);
+            try {
+                // Read the redirect path. This has to read before the session get invalidated as it first
+                // tries to read the redirect path form the session attribute
+//                String redirectPath = readAndForgetRedirectPathAfterSLO(request);
+
+                saml2SSOManager.processResponse(request);
+                //redirect according to relay state attribute
+                String relayStateId = ssoAgentConfiguration.getSAML2().getRelayState();
+                if (relayStateId != null && request.getSession(Boolean.FALSE) != null) {
+                    RelayState relayState = (RelayState) request.getSession(Boolean.FALSE)
+                            .getAttribute(relayStateId);
+                    if (relayState != null) {
+                        request.getSession(Boolean.FALSE).removeAttribute(relayStateId);
+
+                        String requestedURI = relayState.getRequestedURL();
+                        if (relayState.getRequestQueryString() != null) {
+                            requestedURI = requestedURI.concat("?").concat(relayState.getRequestQueryString());
+                        }
+                        if (relayState.getRequestParameters() != null) {
+                            request.getSession(Boolean.FALSE).setAttribute(SSOValveConstants.REQUEST_PARAM_MAP,
+                                    relayState.getRequestParameters());
+                        }
+                        response.sendRedirect(requestedURI);
+                        return;
+                    } else {
+                        response.sendRedirect(
+                                    ssoSPConfigProperties.getProperty(SSOValveConstants.APP_SERVER_URL) + request
+                                        .getContextPath());
+                        return;
+                    }
+                }
+            } catch (SSOException e) {
+                getLogger().log(Level.FINE, "Error in SAML SSO Response processing", e);
+            }
+
 
         } else if (requestResolver.isSLOURL()) {
 

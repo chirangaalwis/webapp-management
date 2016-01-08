@@ -58,8 +58,8 @@ import javax.xml.parsers.ParserConfigurationException;
  */
 public class SSOAgentUtils {
     private static final Logger logger = Logger.getLogger(SSOAgentUtils.class.getName());
-
     private static final Random RANDOM;
+
     private static boolean bootStrapped;
 
     //  a static field initialization block
@@ -134,7 +134,8 @@ public class SSOAgentUtils {
      *                           response body
      */
     public static void sendCharacterData(HttpServletResponse response, String htmlPayload) throws SSOException {
-        try (Writer writer = response.getWriter()) {
+        try {
+            Writer writer = response.getWriter();
             writer.write(htmlPayload);
             response.flushBuffer();
         } catch (IOException e) {
@@ -186,6 +187,7 @@ public class SSOAgentUtils {
         //  TODO: issue related to expanding entity references - dom4j namespace aware by default
         //  TODO: java docs for entity resolver
         doBootstrap();
+//        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setExpandEntityReferences(false);
         documentBuilderFactory.setNamespaceAware(true);

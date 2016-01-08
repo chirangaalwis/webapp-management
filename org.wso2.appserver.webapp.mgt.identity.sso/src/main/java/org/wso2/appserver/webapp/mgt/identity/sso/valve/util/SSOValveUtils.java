@@ -54,6 +54,7 @@ public class SSOValveUtils {
         return Paths.get(getTomcatHome().toString(), SSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
     }
 
+    //  TODO: make changes to comments if tests pass
     /**
      * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
      * </p>
@@ -62,18 +63,19 @@ public class SSOValveUtils {
      * @param contextPath the context path of the service provider application
      * @return a unique id value for the SAML 2.0 service provider application based on its context path
      */
-    public static String generateIssuerID(String contextPath) {
+    public static Optional generateIssuerID(String contextPath) {
         if (Optional.ofNullable(contextPath).isPresent()) {
             String issuerId = contextPath.replaceFirst("/webapps", "").replace("/", "_");
             if (issuerId.startsWith("_")) {
                 issuerId = issuerId.substring(1);
             }
-            return issuerId;
+            return Optional.of(issuerId);
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 
+    //  TODO: make changes to comments if tests pass
     /**
      * Returns a SAML 2.0 Assertion Consumer URL based on service provider application context path.
      * </p>
@@ -84,13 +86,13 @@ public class SSOValveUtils {
      * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path,
      * returns null if context path or the list of configuration properties is/are null
      */
-    public static String generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
+    public static Optional generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
         if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).
                 isPresent())) {
-            return ssoSPConfigProperties.getProperty(SSOValveConstants.APP_SERVER_URL) + contextPath +
-                    ssoSPConfigProperties.getProperty(SSOValveConstants.CONSUMER_URL_POSTFIX);
+            return Optional.of(ssoSPConfigProperties.getProperty(SSOValveConstants.APP_SERVER_URL) + contextPath +
+                    ssoSPConfigProperties.getProperty(SSOValveConstants.CONSUMER_URL_POSTFIX));
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 }

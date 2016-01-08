@@ -16,7 +16,7 @@
 package org.wso2.appserver.webapp.mgt.identity.sso.agent;
 
 /**
- * This class defines the constants utilized in the single-sign-on (SSO) Agent implementation.
+ * This class defines the constants utilized in the single-sign-on (SSO) agent implementation.
  *
  * @since 6.0.0
  */
@@ -33,12 +33,6 @@ public class SSOAgentConstants {
      * This class defines the constants associated during the SAML 2.0 based single-sign-on (SSO) communication.
      */
     public static class SAML2SSO {
-        /**
-         * Prevents instantiating the SAML2SSO nested class
-         */
-        private SAML2SSO() {
-        }
-
         //  SAML 2.0 single-sign-on (SSO) parameter name constants
         public static final String HTTP_POST_PARAM_SAML2_REQUEST = "SAMLRequest";
         public static final String HTTP_POST_PARAM_SAML2_RESPONSE = "SAMLResponse";
@@ -51,6 +45,14 @@ public class SSOAgentConstants {
         public static final String AUTH_REQUEST_SERVICE_PROVIDER_NAME_QUALIFIER = "Issuer";
         public static final String AUTH_CONTEXT_CLASS_URI_REFERENCE =
                 "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport";
+        public static final String EMPTY_STRING = "";
+
+
+        /**
+         * Prevents instantiating the SAML2SSO nested class
+         */
+        private SAML2SSO() {
+        }
     }
 
     /**

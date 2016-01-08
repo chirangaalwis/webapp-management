@@ -29,7 +29,9 @@ public class SSOValveConstants {
     public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
     public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
     //  http servlet request session notes' property name and attribute name constants
-    public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
+    //  http servlet request session notes' property name and attribute name constants
+    protected static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
+    protected static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";
     //  sso configuration property name constants
     public static final String APP_SERVER_URL = "ApplicationServerURL";
     public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";

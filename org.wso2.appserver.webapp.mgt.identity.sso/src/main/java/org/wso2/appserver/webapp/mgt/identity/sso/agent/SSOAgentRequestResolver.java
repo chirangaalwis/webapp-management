@@ -77,9 +77,9 @@ public class SSOAgentRequestResolver {
     }
 
     /**
-     * Returns true if the request is an identity provider initiated SAML 2.0 single-logout request, else returns false.
+     * Returns true if the request is an identity provider initiated SAML 2.0 single-logout request, else false.
      *
-     * @return true if the request is an identity provider initiated SAML 2.0 single-logout request, else returns false
+     * @return true if the request is an identity provider initiated SAML 2.0 single-logout request, else false
      */
     public boolean isSLORequest() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
