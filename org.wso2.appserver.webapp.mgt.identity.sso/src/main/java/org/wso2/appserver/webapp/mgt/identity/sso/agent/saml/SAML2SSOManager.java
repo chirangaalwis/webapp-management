@@ -149,8 +149,8 @@ public class SAML2SSOManager {
     }
 
     /**
-     * Processes a SAML 2.0 response depending on its type, either a SAML 2.0 Response for a single-sign-on SAML
-     * 2.0 Request by the client application or a SAML 2.0 Response for a single-logout SAML 2.0 Request from a
+     * Processes a SAML 2.0 response depending on its type, either a SAML 2.0 Response for a single-sign-on (SSO) SAML
+     * 2.0 Request by the client application or a SAML 2.0 Response for a single-logout (SLO) SAML 2.0 Request from a
      * service provider.
      *
      * @param request the servlet request processed
@@ -175,7 +175,6 @@ public class SAML2SSOManager {
                 //  Additional checks for incompetent IdPs
                 getSSOAgentConfig().getSAML2().setRelayState(relayState);
             }
-
         } else {
             throw new SSOException("Invalid SAML2 Response. SAML2 Response can not be null.");
         }
@@ -197,12 +196,12 @@ public class SAML2SSOManager {
         if (getSSOAgentConfig().getSAML2().isAssertionEncrypted()) {
             //  TODO: to be completed under assertion signing
         } else {
-            List<Assertion> assertions = saml2Response.getAssertions();
-            if ((Optional.ofNullable(assertions).isPresent()) && (!assertions.isEmpty())) {
-                assertion = Optional.of(assertions.get(0));
+            Optional<List<Assertion>> assertions = Optional.ofNullable(saml2Response.getAssertions());
+            if ((assertions.isPresent()) && (!assertions.get().isEmpty())) {
+                assertion = assertions.get().stream().findFirst();
             }
         }
-        if (!Optional.ofNullable(assertion).isPresent()) {
+        if (!assertion.isPresent()) {
             if (isNoPassive(saml2Response)) {
                 getLogger().log(Level.FINE, "Cannot authenticate in passive mode.");
                 return;
@@ -210,16 +209,16 @@ public class SAML2SSOManager {
             throw new SSOException("SAML2 Assertion not found in the Response.");
         }
 
-        String idPEntityIdValue = assertion.get().getIssuer().getValue();
-        if ((!Optional.ofNullable(idPEntityIdValue).isPresent()) || (idPEntityIdValue.isEmpty())) {
+        Optional<String> idPEntityIdValue = Optional.ofNullable(assertion.get().getIssuer().getValue());
+        if ((!idPEntityIdValue.isPresent()) || (idPEntityIdValue.get().isEmpty())) {
             throw new SSOException("SAML2 Response does not contain an Issuer value.");
-        } else if (!idPEntityIdValue.equals(getSSOAgentConfig().getSAML2().getIdPEntityId())) {
+        } else if (!idPEntityIdValue.get().equals(getSSOAgentConfig().getSAML2().getIdPEntityId())) {
             throw new SSOException("SAML2 Response Issuer verification failed.");
         }
         sessionBean.getSAML2SSO().setAssertion(assertion.get());
         //  Cannot marshall SAML assertion here, before signature validation due to an issue in OpenSAML
 
-        //  Get the subject name from the Response Object and forward it to login_action.jsp
+        //  Gets the subject name from the Response Object and forward it to login_action.jsp
         Optional<String> subject = Optional.empty();
         if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional.
                 ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
@@ -233,7 +232,7 @@ public class SAML2SSOManager {
         sessionBean.getSAML2SSO().setSubjectId(subject.get());
         request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
 
-        // validate audience restriction
+        // Validates the audience restriction
         validateAudienceRestriction(assertion.get());
 
         // validate signature
@@ -249,56 +248,6 @@ public class SAML2SSOManager {
         //  TODO: Single log out code
 
         request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
-
-    }
-
-    //  TODO: add comments, to be refactored
-    protected void validateAudienceRestriction(Assertion assertion) throws SSOException {
-/*        if (Optional.ofNullable(assertion).isPresent()) {
-            if (!Optional.ofNullable(assertion.getConditions()).isPresent()) {
-                throw new SSOException("SAML2 Response doesn't contain Conditions.");
-            } else {
-                List<AudienceRestriction> audienceRestrictions = assertion.getConditions().getAudienceRestrictions();
-                if ((!Optional.ofNullable(audienceRestrictions).isPresent()) || (audienceRestrictions.isEmpty())) {
-                    throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions.");
-                } else {
-                    audienceRestrictions.stream().forEach(audienceRestriction -> {
-
-                    });
-                }
-            }
-        }*/
-
-        if (assertion != null) {
-            Conditions conditions = assertion.getConditions();
-            if (conditions != null) {
-                List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
-                if (audienceRestrictions != null && !audienceRestrictions.isEmpty()) {
-                    boolean audienceFound = false;
-                    for (AudienceRestriction audienceRestriction : audienceRestrictions) {
-                        if (audienceRestriction.getAudiences() != null && !audienceRestriction.getAudiences().
-                                isEmpty()) {
-                            for (Audience audience : audienceRestriction.getAudiences()) {
-                                if (getSSOAgentConfig().getSAML2().getSPEntityId().equals(audience.getAudienceURI())) {
-                                    audienceFound = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (audienceFound) {
-                            break;
-                        }
-                    }
-                    if (!audienceFound) {
-                        throw new SSOException("SAML2 Assertion Audience Restriction validation failed");
-                    }
-                } else {
-                    throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions");
-                }
-            } else {
-                throw new SSOException("SAML2 Response doesn't contain Conditions");
-            }
-        }
     }
 
     /**
@@ -309,13 +258,7 @@ public class SAML2SSOManager {
      */
     private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
         //  Issuer identifies the entity that generated the request message
-        /*Issuer issuer = new IssuerBuilder().buildObject();
-        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());*/
-
-        IssuerBuilder issuerBuilder = new IssuerBuilder();
-        Issuer issuer =
-                issuerBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                        "Issuer", "samlp");
+        Issuer issuer = new IssuerBuilder().buildObject();
         issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
 
         //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
@@ -330,13 +273,7 @@ public class SAML2SSOManager {
 
         //  This represents a URI reference identifying an authentication context class that describes the
         //  authentication context declaration that follows
-//        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
-
-        AuthnContextClassRefBuilder authnContextClassRefBuilder = new AuthnContextClassRefBuilder();
-        AuthnContextClassRef authnContextClassRef =
-                authnContextClassRefBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                        "AuthnContextClassRef",
-                        "saml");
+        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
         authnContextClassRef.setAuthnContextClassRef(SSOAgentConstants.SAML2SSO.AUTH_CONTEXT_CLASS_URI_REFERENCE);
 
         //  Specifies the authentication context requirements of authentication statements returned in response
@@ -350,12 +287,7 @@ public class SAML2SSOManager {
         DateTime issueInstant = new DateTime();
 
         //  Create an AuthnRequest instance
-//        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
-
-        AuthnRequestBuilder authRequestBuilder = new AuthnRequestBuilder();
-        AuthnRequest authRequest =
-                authRequestBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:protocol",
-                        "AuthnRequest", "samlp");
+        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
 
         authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
         authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
@@ -374,8 +306,8 @@ public class SAML2SSOManager {
             authRequest.setExtensions((Extensions) request.getAttribute(Extensions.LOCAL_NAME));
         }
 
-        //  Requesting SAML Attributes which the requester desires to be supplied by the identity provider.
-        //  This Index value is registered in the identity provider
+        //  Requesting SAML Attributes which the requester desires to be supplied by the identity provider,
+        //  this Index value is registered in the identity provider
         String index = getSSOAgentConfig().getSAML2().getAttributeConsumingServiceIndex();
         if ((Optional.ofNullable(index).isPresent()) && !(index.trim().isEmpty())) {
             authRequest.setAttributeConsumingServiceIndex(Integer.parseInt(index));
@@ -384,36 +316,7 @@ public class SAML2SSOManager {
         return authRequest;
     }
 
-    private boolean isNoPassive(Response response) {
-        return (Optional.ofNullable(response.getStatus()).isPresent()) &&
-                (Optional.ofNullable(response.getStatus().getStatusCode()).isPresent()) &&
-                (response.getStatus().getStatusCode().getValue().equals(StatusCode.RESPONDER_URI)) &&
-                (Optional.ofNullable(response.getStatus().getStatusCode().getStatusCode()).isPresent()) &&
-                (response.getStatus().getStatusCode().getStatusCode().getValue().equals(StatusCode.NO_PASSIVE_URI));
-    }
-
-    //  TODO: to be refactored
-    private Map<String, String> getAssertionStatements(Assertion assertion) {
-
-        Map<String, String> results = new HashMap<>();
-
-        if (assertion != null && assertion.getAttributeStatements() != null) {
-
-            List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
-
-            for (AttributeStatement statement : attributeStatementList) {
-                List<Attribute> attributesList = statement.getAttributes();
-                for (Attribute attribute : attributesList) {
-                    Element value = attribute.getAttributeValues().get(0).getDOM();
-                    String attributeValue = value.getTextContent();
-                    results.put(attribute.getName(), attributeValue);
-                }
-            }
-
-        }
-        return results;
-    }
-
+    //  TODO: REFACTORING, POSSIBILITY OF MOVING TO UTILS AND COMMENTS
     protected String marshall(XMLObject xmlObject) throws SSOException {
 
         try {
@@ -451,4 +354,66 @@ public class SAML2SSOManager {
                     }
                 }));
     }*/
+
+    /**
+     * Returns true if the identity provider cannot authenticate the principal passively, as requested, else false.
+     *
+     * @param response the SAML 2.0 Response to be evaluated
+     * @return true if the identity provider cannot authenticate the principal passively, as requested, else false
+     */
+    private boolean isNoPassive(Response response) {
+        return (Optional.ofNullable(response.getStatus()).isPresent()) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getValue().equals(StatusCode.RESPONDER_URI)) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getStatusCode().getValue().equals(StatusCode.NO_PASSIVE_URI));
+    }
+
+    /**
+     * Validates the SAML 2.0 Audience Restrictions set in the specified SAML 2.0 Assertion.
+     *
+     * @param assertion the SAML 2.0 Assertion in which Audience Restrictions' validity is checked for
+     * @throws SSOException if the Audience Restriction validation fails
+     */
+    private void validateAudienceRestriction(Assertion assertion) throws SSOException {
+        if (!Optional.ofNullable(assertion).isPresent()) {
+            return;
+        }
+
+        Conditions conditions = assertion.getConditions();
+        if (!Optional.ofNullable(conditions).isPresent()) {
+            throw new SSOException("SAML2 Response doesn't contain Conditions.");
+        }
+
+        List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
+        if ((!Optional.ofNullable(audienceRestrictions).isPresent()) || (audienceRestrictions.isEmpty())) {
+            throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions.");
+        }
+
+        Stream<AudienceRestriction> audienceExistingStream = audienceRestrictions.stream().filter(audienceRestriction ->
+                (((Optional.ofNullable(audienceRestriction.getAudiences()).isPresent()) && (!audienceRestriction.
+                        getAudiences().isEmpty()))) && (audienceRestriction.getAudiences().stream().
+                        filter(audience -> getSSOAgentConfig().getSAML2().getSPEntityId().
+                                equals(audience.getAudienceURI()))).count() > 0);
+
+        if (audienceExistingStream.count() == 0) {
+            throw new SSOException("SAML2 Assertion Audience Restriction validation failed.");
+        }
+    }
+
+    //  TODO: ADD JAVADOC COMMENTS
+    private Map<String, String> getAssertionStatements(Assertion assertion) {
+        Map<String, String> results = new HashMap<>();
+        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements()).
+                isPresent())) {
+            Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
+            attributeStatements.
+                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
+                        Element value = attribute.getAttributeValues().get(0).getDOM();
+                        String attributeValue = value.getTextContent();
+                        results.put(attribute.getName(), attributeValue);
+                    }));
+        }
+        return results;
+    }
 }

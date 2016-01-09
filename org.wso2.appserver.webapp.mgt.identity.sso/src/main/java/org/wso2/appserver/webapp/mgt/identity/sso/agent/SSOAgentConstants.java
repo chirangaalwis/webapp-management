@@ -56,7 +56,7 @@ public class SSOAgentConstants {
     }
 
     /**
-     * This class defines the single-sign-on (SSO) Agent configuration property name constants.
+     * This class defines the single-sign-on (SSO) agent configuration property name constants.
      */
     public static class SSOAgentConfiguration {
         public static final String ENABLE_SAML2_SSO_LOGIN = "EnableSAML2SSOLogin";

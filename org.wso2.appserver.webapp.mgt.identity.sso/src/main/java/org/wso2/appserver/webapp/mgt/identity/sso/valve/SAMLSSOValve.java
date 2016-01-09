@@ -40,7 +40,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpSession;
 
 /**
- * This class implements an Apache Tomcat valve, which performs SAML 2.0 single-sign-on function.
+ * This class implements an Apache Tomcat valve, which performs SAML 2.0 based single-sign-on (SSO) function.
  * </p>
  * This is a sub-class of the {@code org.apache.catalina.authenticator.SingleSignOn} class.
  *
@@ -90,7 +90,7 @@ public class SAMLSSOValve extends SingleSignOn {
     }
 
     /**
-     * Performs single-sign-on processing for this request using SAML 2.0 protocol.
+     * Performs single-sign-on (SSO) processing for this request using SAML 2.0 protocol.
      * </p>
      * This method overrides the parent {@link SingleSignOn} class' invoke() method.
      *
@@ -101,13 +101,13 @@ public class SAMLSSOValve extends SingleSignOn {
      */
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
-        getLogger().log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
+        getLogger().log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI() + ".");
 
         Properties configurationProperties = getSSOSPConfigProperties();
 
         //  Checks if SAML 2.0 single-sign-on valve is enabled in the context-param
         if (!(Boolean.parseBoolean(request.getContext().findParameter(SSOValveConstants.ENABLE_SAML2_SSO)))) {
-            getLogger().log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
+            getLogger().log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName() + ".");
             //  Moves onto the next valve, if SAML2 SSO valve is not enabled
             getNext().invoke(request, response);
             return;
@@ -132,7 +132,7 @@ public class SAMLSSOValve extends SingleSignOn {
 
                 request.getSessionInternal().setNote(SSOValveConstants.SSO_AGENT_CONFIG, ssoAgentConfiguration);
             } catch (SSOException e) {
-                getLogger().log(Level.SEVERE, "Error on initializing SAML2SSOManager", e);
+                getLogger().log(Level.SEVERE, "Error on initializing SAML2SSOManager.", e);
                 return;
             }
         } else {
@@ -154,11 +154,7 @@ public class SAMLSSOValve extends SingleSignOn {
         if (requestResolver.isSLORequest()) {
 
         } else if (requestResolver.isSAML2SSOResponse()) {
-
-            /*if (log.isDebugEnabled()) {
-                log.debug("Processing SSO Response.");
-            }*/
-
+            getLogger().log(Level.FINE, "Processing SSO Response...");
             saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
 
             try {
@@ -193,7 +189,7 @@ public class SAMLSSOValve extends SingleSignOn {
                     }
                 }
             } catch (SSOException e) {
-                getLogger().log(Level.FINE, "Error in SAML SSO Response processing", e);
+                getLogger().log(Level.FINE, "Error in SAML SSO Response processing.", e);
             }
 
 
@@ -202,7 +198,7 @@ public class SAMLSSOValve extends SingleSignOn {
         } else if ((requestResolver.isSAML2SSOURL()) || ((!Optional.ofNullable(session).isPresent()) || (!Optional.
                 ofNullable(session.getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).isPresent()))) {
             //  Handles the unauthenticated requests for all contexts
-            getLogger().log(Level.FINE, "Processing SSO URL");
+            getLogger().log(Level.FINE, "Processing SSO URL...");
             saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
 
             String relayStateId = SSOAgentUtils.createID();

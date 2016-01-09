@@ -58,6 +58,7 @@
                             <exclude>org.apache.tomcat:coyote</exclude>
                             <exclude>org.apache.tomcat:servlet-api</exclude>
                             <exclude>org.bouncycastle:bcprov-jdk15on</exclude>
+                            <exclude>commons-lang:commons-lang</exclude>
                         </excludes>
                     </artifactSet>
                     <finalName>${project.artifactId}.dependencies</finalName>

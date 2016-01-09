@@ -16,7 +16,7 @@
 package org.wso2.appserver.webapp.mgt.identity.sso.valve;
 
 /**
- * This class defines constants used in the implementation of the SAML 2.0 single-sign-on valve.
+ * This class defines constants used in the implementation of the SAML 2.0 single-sign-on (SSO) valve.
  *
  * @since 6.0.0
  */
@@ -29,10 +29,15 @@ public class SSOValveConstants {
     public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
     public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
     //  http servlet request session notes' property name and attribute name constants
-    //  http servlet request session notes' property name and attribute name constants
-    protected static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
-    protected static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";
+    public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
+    public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";
     //  sso configuration property name constants
     public static final String APP_SERVER_URL = "ApplicationServerURL";
     public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
+
+    /**
+     * Prevents instantiating this class.
+     */
+    private SSOValveConstants() {
+    }
 }

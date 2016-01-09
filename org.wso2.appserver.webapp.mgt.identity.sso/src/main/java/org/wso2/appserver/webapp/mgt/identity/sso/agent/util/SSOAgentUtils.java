@@ -40,10 +40,12 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -86,7 +88,8 @@ public class SSOAgentUtils {
 
     /**
      * Initializes the OpenSAML2 library, if it is not initialized yet.
-     * It calls the bootstrap method of {@code DefaultBootstrap}.
+     * </p>
+     * Calls the bootstrap method of {@code DefaultBootstrap}.
      *
      * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
      */
@@ -108,13 +111,10 @@ public class SSOAgentUtils {
      */
     public static String createID() {
         byte[] bytes = new byte[20]; // 160 bit
-
         getRandom().nextBytes(bytes);
-
         char[] characterMapping = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' };
 
         char[] characters = new char[40];
-
         IntStream.range(0, bytes.length).forEach(index -> {
             int left = (bytes[index] >> 4) & 0x0f;
             int right = bytes[index] & 0x0f;
@@ -123,6 +123,21 @@ public class SSOAgentUtils {
         });
 
         return String.valueOf(characters);
+    }
+
+    /**
+     * Returns true if the specified {@code String} is blank, else false.
+     *
+     * @param stringValue the {@link String} to be checked whether it is blank
+     * @return true if the specified {@link String} is blank, else false
+     */
+    public static boolean isBlank(String stringValue) {
+        if ((!Optional.ofNullable(stringValue).isPresent()) || (stringValue.isEmpty())) {
+            return true;
+        }
+        Stream<Character> characterStream = stringValue.chars().
+                mapToObj(intCharacter -> (char) intCharacter).parallel().filter(Character::isWhitespace);
+        return characterStream.count() == stringValue.length();
     }
 
     /**
@@ -138,45 +153,62 @@ public class SSOAgentUtils {
             Writer writer = response.getWriter();
             writer.write(htmlPayload);
             response.flushBuffer();
+            //  Not closing the Writer instance, as its creator is the HttpServletResponse
         } catch (IOException e) {
-            throw new SSOException("Error occurred while writing to HttpServletResponse", e);
-        }
-    }
-
-    //  TODO: to be refactored, improved and comments to be added
-    public static String encodeRequestMessage(RequestAbstractType requestMessage, String binding) throws SSOException {
-        Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(requestMessage);
-        Element authDOM;
-        try {
-            authDOM = marshaller.marshall(requestMessage);
-            StringWriter rspWrt = new StringWriter();
-            XMLHelper.writeNode(authDOM, rspWrt);
-            if (SAMLConstants.SAML2_REDIRECT_BINDING_URI.equals(binding)) {
-                //Compress the message, Base 64 encode and URL encode
-                Deflater deflater = new Deflater(Deflater.DEFLATED, true);
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                DeflaterOutputStream deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream, deflater);
-                deflaterOutputStream.write(rspWrt.toString().getBytes(Charset.forName("UTF-8")));
-                deflaterOutputStream.close();
-                String encodedRequestMessage = Base64.
-                        encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-                return URLEncoder.encode(encodedRequestMessage, "UTF-8").trim();
-            } else if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
-                return Base64.
-                        encodeBytes(rspWrt.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
-            } else {
-                getLogger().log(Level.FINE,
-                        "Unsupported SAML2 HTTP Binding. Defaulting to " + SAMLConstants.SAML2_POST_BINDING_URI);
-                return Base64.
-                        encodeBytes(rspWrt.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
-            }
-        } catch (MarshallingException | IOException e) {
-            throw new SSOException("Error occurred while encoding SAML2 request", e);
+            throw new SSOException("Error occurred while writing to HttpServletResponse.", e);
         }
     }
 
     /**
-     * Returns an XML object from the {@code String} value representing the XML syntax.
+     * Encodes the SAML 2.0 based request XML object into its corresponding Base64 notation, based on the type of
+     * SAML 2.0 binding.
+     *
+     * @param requestMessage the {@link RequestAbstractType} XML object to be encoded
+     * @param binding        the SAML 2.0 binding type
+     * @return encoded {@link String} corresponding to the request XML object
+     * @throws SSOException if an error occurs while encoding SAML2 request
+     */
+    public static String encodeRequestMessage(RequestAbstractType requestMessage, String binding) throws SSOException {
+        Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(requestMessage);
+        Element authDOM;
+        try {
+            //  Marshall this element, and its children, and root them in a newly created Document
+            authDOM = marshaller.marshall(requestMessage);
+        } catch (MarshallingException e) {
+            throw new SSOException("Error occurred while encoding SAML2 request. Failed to marshall the SAML 2.0 " +
+                    "Request element XMLObject to its corresponding W3C DOM element.", e);
+        }
+
+        StringWriter writer = new StringWriter();
+        //  Writes the node out to the writer using the DOM
+        XMLHelper.writeNode(authDOM, writer);
+
+        if (SAMLConstants.SAML2_REDIRECT_BINDING_URI.equals(binding)) {
+            //  Compress the message, Base 64 encode and URL encode
+            Deflater deflater = new Deflater(Deflater.DEFLATED, true);
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            try (DeflaterOutputStream deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream,
+                    deflater)) {
+                deflaterOutputStream.write(writer.toString().getBytes(Charset.forName("UTF-8")));
+                String encodedRequestMessage = Base64.
+                        encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+                return URLEncoder.encode(encodedRequestMessage, "UTF-8").trim();
+            } catch (IOException e) {
+                throw new SSOException("Error occurred while encoding SAML2 request.", e);
+            }
+        } else if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
+            return Base64.
+                    encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
+        } else {
+            getLogger().log(Level.FINE,
+                    "Unsupported SAML2 HTTP Binding. Defaulting to " + SAMLConstants.SAML2_POST_BINDING_URI + ".");
+            return Base64.
+                    encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
+        }
+    }
+
+    /**
+     * Returns a SAML 2.0 based XML object from the {@code String} value representing the XML syntax.
      *
      * @param xmlString the {@link String} representation of the XML content
      * @return an XML object from the {@link String} value representing the XML syntax
@@ -187,7 +219,6 @@ public class SSOAgentUtils {
         //  TODO: issue related to expanding entity references - dom4j namespace aware by default
         //  TODO: java docs for entity resolver
         doBootstrap();
-//        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setExpandEntityReferences(false);
         documentBuilderFactory.setNamespaceAware(true);

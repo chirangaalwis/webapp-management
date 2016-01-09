@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.Properties;
 
 /**
- * This class contains utility methods of the implementation of the SAML 2.0 single-sign-on valve.
+ * This class contains utility methods of the implementation of the SAML 2.0 single-sign-on (SSO) valve.
  *
  * @since 6.0.0
  */
@@ -54,11 +54,10 @@ public class SSOValveUtils {
         return Paths.get(getTomcatHome().toString(), SSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
     }
 
-    //  TODO: make changes to comments if tests pass
     /**
      * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
      * </p>
-     * If context path is null, a null value is returned.
+     * An {@code Optional String} id is returned based on the context path provided.
      *
      * @param contextPath the context path of the service provider application
      * @return a unique id value for the SAML 2.0 service provider application based on its context path
@@ -75,16 +74,14 @@ public class SSOValveUtils {
         }
     }
 
-    //  TODO: make changes to comments if tests pass
     /**
      * Returns a SAML 2.0 Assertion Consumer URL based on service provider application context path.
      * </p>
-     * If context path or the list of configuration properties is/are null, null is returned.
+     * An {@code Optional String} URL is returned based on the context path and configuration properties provided.
      *
      * @param contextPath           the context path of the service provider application
      * @param ssoSPConfigProperties the global single-sign-on configuration properties
-     * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path,
-     * returns null if context path or the list of configuration properties is/are null
+     * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path
      */
     public static Optional generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
         if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).

@@ -53,10 +53,10 @@ public class SSOAgentRequestResolver {
     }
 
     /**
-     * Returns true if request URI matches the globally configured URL to send SAML 2.0 single-sign-on
+     * Returns true if request URI matches the globally configured URL to send SAML 2.0 single-sign-on (SSO)
      * authentication request(s), else false.
      *
-     * @return true if request URI matches the globally configured URL to send SAML 2.0 single-sign-on
+     * @return true if request URI matches the globally configured URL to send SAML 2.0 single-sign-on (SSO)
      * authentication request(s), else false
      */
     public boolean isSAML2SSOURL() {
@@ -65,11 +65,13 @@ public class SSOAgentRequestResolver {
     }
 
     /**
-     * Returns true if request corresponds to a SAML 2.0 Response for a SAML 2.0 single-sign-on authentication request
-     * by the service provider or to a SAML 2.0 Response for a SAML 2.0 single-logout request from the service provider.
+     * Returns true if request corresponds to a SAML 2.0 Response for a SAML 2.0 single-sign-on (SSO) authentication
+     * request by the service provider or to a SAML 2.0 Response for a SAML 2.0 single-logout (SLO) request from the
+     * service provider.
      *
-     * @return true if request corresponds to a SAML 2.0 Response for a SAML 2.0 single-sign-on authentication request
-     * by the service provider or to a SAML 2.0 Response for a SAML 2.0 single-logout request from the service provider
+     * @return true if request corresponds to a SAML 2.0 Response for a SAML 2.0 single-sign-on (SSO) authentication
+     * request by the service provider or to a SAML 2.0 Response for a SAML 2.0 single-logout (SLO) request from the
+     * service provider
      */
     public boolean isSAML2SSOResponse() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
@@ -77,9 +79,9 @@ public class SSOAgentRequestResolver {
     }
 
     /**
-     * Returns true if the request is an identity provider initiated SAML 2.0 single-logout request, else false.
+     * Returns true if the request is an identity provider initiated SAML 2.0 single-logout (SLO) request, else false.
      *
-     * @return true if the request is an identity provider initiated SAML 2.0 single-logout request, else false
+     * @return true if the request is an identity provider initiated SAML 2.0 single-logout (SLO) request, else false
      */
     public boolean isSLORequest() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
@@ -88,10 +90,10 @@ public class SSOAgentRequestResolver {
 
     /**
      * Returns true if the request URI matches globally configured URL for sending session participant initiated
-     * SAML 2.0 single-logout request(s), else false.
+     * SAML 2.0 single-logout (SLO) request(s), else false.
      *
      * @return true if the request URI matches globally configured URL for sending session participant initiated
-     * SAML 2.0 single-logout request(s), else false
+     * SAML 2.0 single-logout (SLO) request(s), else false
      */
     public boolean isSLOURL() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) &&

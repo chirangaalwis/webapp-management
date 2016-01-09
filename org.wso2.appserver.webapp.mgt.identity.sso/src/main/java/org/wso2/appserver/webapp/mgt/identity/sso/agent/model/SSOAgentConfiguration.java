@@ -19,6 +19,7 @@ import org.apache.commons.lang.StringUtils;
 import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
+import org.wso2.appserver.webapp.mgt.identity.sso.agent.util.SSOAgentUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,27 +45,27 @@ public class SSOAgentConfiguration {
 
     private static final Logger logger = Logger.getLogger(SSOAgentConfiguration.class.getName());
 
-    private Boolean isSAML2SSOLoginEnabled = false;
-    private Boolean isOAuth2SAML2GrantEnabled = false;
+    private Boolean isSAML2SSOLoginEnabled;
+    private Boolean isOAuth2SAML2GrantEnabled;
 
-    private String saml2SSOURL = null;
-    private String oauth2SAML2GrantURL = null;
-    private Set<String> skipURIs = new HashSet<>();
+    private String saml2SSOURL;
+    private String oauth2SAML2GrantURL;
+    private Set<String> skipURIs;
 
-    private Map<String, String[]> queryParameters = new HashMap<>();
+    private Map<String, String[]> queryParameters;
 
-    private SAML2 saml2 = new SAML2();
-    private OAuth2 oauth2 = new OAuth2();
+    private SAML2 saml2;
+    private OAuth2 oauth2;
 
     //  An instance field initialization block
-    /*{
+    {
         setQueryParameters(new HashMap<>());
         setSkipURIs(new HashSet<>());
         setSAML2(new SAML2());
         setOAuth2(new OAuth2());
-    }*/
+    }
 
-    public static Logger getLogger() {
+    private static Logger getLogger() {
         return logger;
     }
 
@@ -164,14 +165,14 @@ public class SSOAgentConfiguration {
                     getProperty(SSOAgentConstants.SSOAgentConfiguration.OAUTH2_SAML2_GRANT_URL));
 
             String skipURIsString = configProperties.getProperty(SSOAgentConstants.SSOAgentConfiguration.SKIP_URIS);
-            if (!StringUtils.isBlank(skipURIsString)) {
+            if (!SSOAgentUtils.isBlank(skipURIsString)) {
                 String[] skipURIArray = skipURIsString.split(",");
                 Stream.of(skipURIArray).forEach(getSkipURIs()::add);
             }
 
             String queryParameterString = configProperties.
                     getProperty(SSOAgentConstants.SSOAgentConfiguration.QUERY_PARAMS);
-            if (!StringUtils.isBlank(queryParameterString)) {
+            if (!SSOAgentUtils.isBlank(queryParameterString)) {
                 Map<String, List<String>> queryParameterMap = new HashMap<>();
                 Stream.of(queryParameterString.split("&")).forEach(queryParameter -> {
                     String[] splitParameters = queryParameter.split("=");
@@ -184,7 +185,7 @@ public class SSOAgentConfiguration {
                             queryParameterMap.put(splitParameters[0], newList);
                         }
                     }
-                    queryParameterMap.entrySet().forEach(entry -> {
+                    queryParameterMap.entrySet().stream().forEach(entry -> {
                         String[] values = entry.getValue().toArray(new String[entry.getValue().size()]);
                         getQueryParameters().put(entry.getKey(), values);
                     });

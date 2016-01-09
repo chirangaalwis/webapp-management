@@ -30,7 +30,6 @@ import java.util.Optional;
 import javax.xml.bind.annotation.XmlAttribute;
 
 public class LoggedInSessionBean implements Serializable {
-
     private static final long serialVersionUID = 7762835859870143767L;
 
     private SAML2SSO saml2SSO;
