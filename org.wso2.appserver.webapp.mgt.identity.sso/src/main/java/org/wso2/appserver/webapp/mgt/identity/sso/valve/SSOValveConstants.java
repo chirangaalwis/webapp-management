@@ -34,6 +34,9 @@ public class SSOValveConstants {
     //  sso configuration property name constants
     public static final String APP_SERVER_URL = "ApplicationServerURL";
     public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
+    public static final String HANDLE_CONSUMER_URL_AFTER_SLO = "handleConsumerURLAfterSLO";
+
+    public static final String REDIRECT_PATH_AFTER_SLO = "redirectPathAfterSLO";
 
     /**
      * Prevents instantiating this class.
