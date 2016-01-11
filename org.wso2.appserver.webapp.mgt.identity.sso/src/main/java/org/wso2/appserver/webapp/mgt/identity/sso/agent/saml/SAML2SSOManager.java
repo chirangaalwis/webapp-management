@@ -86,7 +86,7 @@ public class SAML2SSOManager {
      */
     public String buildPostRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
         //  Parent complex type RequestAbstractType from which all SAML request types are derived
-        RequestAbstractType requestMessage = null;
+        RequestAbstractType requestMessage;
         if (!isLogout) {
             requestMessage = buildAuthnRequest(request);
             /*if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
@@ -124,14 +124,21 @@ public class SAML2SSOManager {
         }
 
         StringBuilder htmlParameters = new StringBuilder();
-        parameters.entrySet().stream().forEach(entry -> {
+        parameters.entrySet().stream().filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
+                ofNullable(entry.getValue()).isPresent()) && (entry.getValue().length > 0))).
+                forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).forEach(
+                        parameter -> htmlParameters.append("<input type='hidden' name='").append(filteredEntry.getKey())
+                                .append("' value='").append(parameter).append("'>\n")));
+
+        //  TODO: TO BE TESTED AND REMOVED
+/*        parameters.entrySet().stream().forEach(entry -> {
             if ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.ofNullable(entry.getValue()).isPresent())
                     && (entry.getValue().length > 0)) {
                 Stream.of(entry.getValue()).forEach(
                         parameter -> htmlParameters.append("<input type='hidden' name='").append(entry.getKey()).
                                 append("' value='").append(parameter).append("'>\n"));
             }
-        });
+        });*/
 
         String htmlPayload = getSSOAgentConfig().getSAML2().getPostBindingRequestHTMLPayload();
         if ((!Optional.ofNullable(htmlPayload).isPresent()) || (!htmlPayload.contains("<!--$saml_params-->"))) {
@@ -172,25 +179,29 @@ public class SAML2SSOManager {
             XMLObject samlObject = SSOAgentUtils.unmarshall(decodedResponse);
             if (samlObject instanceof LogoutResponse) {
                 //  This is a SAML response for a single logout request from the service provider
-//                performSingleLogout(request);
-                doSLO(request);
+                performSingleLogout(request);
             } else {
-                processSSOResponse(request);
+                processSingleSignInResponse(request);
             }
             String relayState = request.getParameter(RelayState.DEFAULT_ELEMENT_LOCAL_NAME);
 
-            if ((Optional.ofNullable(relayState).isPresent()) && !relayState.isEmpty() && !(("null").
+            if ((Optional.ofNullable(relayState).isPresent()) && (!relayState.isEmpty()) && (!("null").
                     equalsIgnoreCase(relayState))) {
                 //  Additional checks for incompetent IdPs
                 getSSOAgentConfig().getSAML2().setRelayState(relayState);
             }
         } else {
-            throw new SSOException("Invalid SAML2 Response. SAML2 Response can not be null.");
+            throw new SSOException("Invalid SAML2 Response. SAML2 Response cannot be null.");
         }
     }
 
-    //  TODO: add java doc comments
-    private void processSSOResponse(HttpServletRequest request) throws SSOException {
+    /**
+     * Processes a single-sign-in SAML 2.0 Response received for an Authentication Request sent.
+     *
+     * @param request the HTTP servlet request used to process the SAML 2.0 Response
+     * @throws SSOException if the received SAML 2.0 Response is invalid
+     */
+    private void processSingleSignInResponse(HttpServletRequest request) throws SSOException {
         LoggedInSessionBean sessionBean = new LoggedInSessionBean();
         sessionBean.setSAML2SSO(new LoggedInSessionBean.SAML2SSO());
 
@@ -241,10 +252,10 @@ public class SAML2SSOManager {
         sessionBean.getSAML2SSO().setSubjectId(subject.get());
         request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
 
-        // Validates the audience restriction
+        //  Validates the audience restriction
         validateAudienceRestriction(assertion.get());
 
-        // validate signature
+        //  Validate signature
 //        validateSignature(saml2Response, assertion);
 
         // Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
@@ -254,18 +265,17 @@ public class SAML2SSOManager {
                 SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                 setSubjectAttributes(getAssertionStatements(assertion.get()));
 
-        //  TODO: Single log out code
-        //For removing the session when the single sign out request made by the SP itself
+        //  For removing the session when the single-logout request made by the service provider itself
         if (getSSOAgentConfig().getSAML2().isSLOEnabled()) {
-            String sessionId = assertion.get().getAuthnStatements().get(0).getSessionIndex();
-            if (sessionId == null) {
+            Optional<String> sessionId = Optional.
+                    ofNullable(assertion.get().getAuthnStatements().get(0).getSessionIndex());
+            if (!sessionId.isPresent()) {
                 throw new SSOException("Single Logout is enabled but IdP Session ID not found in SAML2 Assertion");
             }
-            ((LoggedInSessionBean) request.getSession().getAttribute(
-                    SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().setSessionIndex(sessionId);
+            ((LoggedInSessionBean) request.getSession().
+                    getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().setSessionIndex(sessionId.get());
             SSOAgentSessionManager.addAuthenticatedSession(request.getSession(false));
         }
-        //  TODO: Single log out code
 
         request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
     }
@@ -366,7 +376,7 @@ public class SAML2SSOManager {
         return logoutReq;
     }
 
-    public void doSLO(HttpServletRequest request) throws SSOException {
+    public void performSingleLogout(HttpServletRequest request) throws SSOException {
 
         XMLObject saml2Object = null;
         if (request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST) != null) {

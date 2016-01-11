@@ -18,8 +18,6 @@ package org.wso2.appserver.webapp.mgt.identity.sso.valve;
 import org.apache.catalina.authenticator.SingleSignOn;
 import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
-import org.apache.catalina.realm.GenericPrincipal;
-import org.apache.catalina.realm.MemoryRealm;
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
 import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentRequestResolver;
@@ -35,7 +33,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Optional;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -157,59 +156,47 @@ public class SAMLSSOValve extends SingleSignOn {
                 log.debug("Processing Single Log Out Request");
             }*/
             saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
-            saml2SSOManager.doSLO(request);
+            saml2SSOManager.performSingleLogout(request);
 
 
         } else if (requestResolver.isSAML2SSOResponse()) {
+            //  Handles either a SAML 2.0 Response for a SSO SAML 2.0 Request by the client application
+            //  or a SAML 2.0 Response for a SLO SAML 2.0 Request from a service provider
             getLogger().log(Level.FINE, "Processing SSO Response...");
             saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
 
-            try {
-                // Read the redirect path. This has to read before the session get invalidated as it first
-                // tries to read the redirect path form the session attribute
-                String redirectPath = readAndForgetRedirectPathAfterSLO(request);
+            //  Reads the redirect path. This has to read before the session get invalidated as it first
+            //  tries to read the redirect path from the session attribute.
+            String redirectPath = readAndForgetRedirectPathAfterSLO(request);
 
-                saml2SSOManager.processResponse(request);
-                //redirect according to relay state attribute
-                String relayStateId = ssoAgentConfiguration.getSAML2().getRelayState();
-                if (relayStateId != null && request.getSession(Boolean.FALSE) != null) {
-                    RelayState relayState = (RelayState) request.getSession(Boolean.FALSE)
-                            .getAttribute(relayStateId);
-                    if (relayState != null) {
-                        request.getSession(Boolean.FALSE).removeAttribute(relayStateId);
-
-                        String requestedURI = relayState.getRequestedURL();
-                        if (relayState.getRequestQueryString() != null) {
-                            requestedURI = requestedURI.concat("?").concat(relayState.getRequestQueryString());
-                        }
-                        if (relayState.getRequestParameters() != null) {
-                            request.getSession(Boolean.FALSE).setAttribute(SSOValveConstants.REQUEST_PARAM_MAP,
-                                    relayState.getRequestParameters());
-                        }
-                        response.sendRedirect(requestedURI);
-                        return;
-                    } else {
-                        response.sendRedirect(
-                                    ssoSPConfigProperties.getProperty(SSOValveConstants.APP_SERVER_URL) + request
-                                        .getContextPath());
-                        return;
-                    }
+            saml2SSOManager.processResponse(request);
+            //  Redirect according to relay state attribute
+            String relayStateId = ssoAgentConfiguration.getSAML2().getRelayState();
+            if ((Optional.ofNullable(relayStateId).isPresent()) && (Optional.ofNullable(session).isPresent())) {
+                Optional<RelayState> relayState = Optional.
+                        ofNullable((RelayState) session.getAttribute(relayStateId));
+                if (relayState.isPresent()) {
+                    session.removeAttribute(relayStateId);
+                    StringBuilder requestedURI = new StringBuilder(relayState.get().getRequestedURL());
+                    Optional.ofNullable(relayState.get().getRequestQueryString()).
+                            ifPresent(queryString -> requestedURI.append("?").append(queryString));
+                    Optional.ofNullable(relayState.get().getRequestParameters()).ifPresent(queryParameters -> session.
+                            setAttribute(SSOValveConstants.REQUEST_PARAM_MAP, relayState.get().getRequestParameters()));
+                    response.sendRedirect(requestedURI.toString());
+                } else {
+                    response.sendRedirect(
+                            getSSOSPConfigProperties().getProperty(SSOValveConstants.APP_SERVER_URL) + request
+                                    .getContextPath());
                 }
-                //Handling redirect from acs page after SLO response. This will be done if
-                // WWebappSSOConstants.HANDLE_CONSUMER_URL_AFTER_SLO is defined
-                // WebappSSOConstants.REDIRECT_PATH_AFTER_SLO value is used determine the redirect path
-                else if (request.getRequestURI()
-                        .endsWith(ssoSPConfigProperties.getProperty(SSOValveConstants.CONSUMER_URL_POSTFIX))
-                        && Boolean.parseBoolean(
-                        ssoSPConfigProperties.getProperty(SSOValveConstants.HANDLE_CONSUMER_URL_AFTER_SLO))) {
-                    response.sendRedirect(redirectPath);
-                    return;
-                }
-            } catch (SSOException e) {
-                getLogger().log(Level.FINE, "Error in SAML SSO Response processing.", e);
+            } else if (request.getRequestURI().
+                    endsWith(getSSOSPConfigProperties().getProperty(SSOValveConstants.CONSUMER_URL_POSTFIX)) && Boolean.
+                    parseBoolean(
+                            getSSOSPConfigProperties().getProperty(SSOValveConstants.HANDLE_CONSUMER_URL_AFTER_SLO))) {
+                //  Handling redirect from acs page after SLO response. This will be done if
+                //  SSOValveConstants.HANDLE_CONSUMER_URL_AFTER_SLO is defined
+                //  SSOValveConstants.REDIRECT_PATH_AFTER_SLO value is used determine the redirect path
+                response.sendRedirect(redirectPath);
             }
-
-
         } else if (requestResolver.isSLOURL()) {
 
             /*if (log.isDebugEnabled()) {
@@ -250,9 +237,7 @@ public class SAMLSSOValve extends SingleSignOn {
             relayState.setRequestParameters(request.getParameterMap());
             ssoAgentConfiguration.getSAML2().setRelayState(relayStateId);
 
-            if (Optional.ofNullable(session).isPresent()) {
-                session.setAttribute(relayStateId, relayState);
-            }
+            Optional.ofNullable(session).ifPresent(httpSession -> httpSession.setAttribute(relayStateId, relayState));
 
             ssoAgentConfiguration.getSAML2().setPassiveAuthn(false);
             if (requestResolver.isHttpPostBinding()) {
@@ -265,8 +250,21 @@ public class SAMLSSOValve extends SingleSignOn {
             return;
         }
 
+        Optional.ofNullable(session).ifPresent(httpSession -> {
+            LoggedInSessionBean loggedInSessionBean = (LoggedInSessionBean) httpSession
+                    .getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
+            Optional.ofNullable(loggedInSessionBean).ifPresent(sessionBean -> {
+                LoggedInSessionBean.SAML2SSO saml2SSO = sessionBean.getSAML2SSO();
+                String principalName = saml2SSO.getSubjectId();
 
-        /*if (request.getSession(false) != null) {
+                //  Setting user name and roles in to UserPrincipal
+                Optional.ofNullable(principalName).ifPresent(name -> {
+
+                });
+            });
+        });
+
+/*        if (request.getSession(false) != null) {
             LoggedInSessionBean loggedInSessionBean = (LoggedInSessionBean) request.getSession(false)
                     .getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
 
@@ -288,7 +286,7 @@ public class SAMLSSOValve extends SingleSignOn {
                             rolesList = Arrays.asList(rolesArr);
                         }
                     }
-                    request.setUserPrincipal(new GenericPrincipal(new MemoryRealm(), principalName, null, rolesList));
+                    request.setUserPrincipal(new GenericPrincipal(principalName, null, rolesList));
                 }
             }
         }*/
@@ -299,37 +297,43 @@ public class SAMLSSOValve extends SingleSignOn {
         getNext().invoke(request, response);
     }
 
-
     /**
-     * This method reads the Redirect Path After SLO. If the redirect path is read from session then it is removed.
-     * Priority of reading the redirect path is 1. Session, 2. Context 3. Config
+     * Returns the redirect path after single-logout, read from the {@code request}.
+     * </p>
+     * If the redirect path is read from session then it is removed. Priority order of reading the redirect path is from
+     * the Session, Context and Config, respectively.
      *
-     * @param request
+     * @param request the HTTP servlet request
      * @return redirect path relative to the current application path
      */
     private String readAndForgetRedirectPathAfterSLO(Request request) {
-        String redirectPath = null;
-        if (request.getSession(false) != null) {
-            redirectPath = (String) request.getSession(false).getAttribute(SSOValveConstants.REDIRECT_PATH_AFTER_SLO);
-            request.getSession(false).removeAttribute(SSOValveConstants.REDIRECT_PATH_AFTER_SLO);
-        }
-        if (redirectPath == null) {
-            redirectPath = (String) request.getContext().findParameter(SSOValveConstants.REDIRECT_PATH_AFTER_SLO);
-        }
-        if (redirectPath == null) {
-            redirectPath = ssoSPConfigProperties.getProperty(SSOValveConstants.REDIRECT_PATH_AFTER_SLO);
+        Optional<String> redirectPath = Optional.empty();
+        HttpSession session = request.getSession(false);
+
+        if (Optional.ofNullable(session).isPresent()) {
+            redirectPath = Optional.ofNullable(
+                    (String) request.getSession(false).getAttribute(SSOValveConstants.REDIRECT_PATH_AFTER_SLO));
+            session.removeAttribute(SSOValveConstants.REDIRECT_PATH_AFTER_SLO);
         }
 
-        if (redirectPath != null && !redirectPath.isEmpty()) {
-            redirectPath = request.getContext().getPath().concat(redirectPath);
+        if (!redirectPath.isPresent()) {
+            redirectPath = Optional.
+                    ofNullable(request.getContext().findParameter(SSOValveConstants.REDIRECT_PATH_AFTER_SLO));
+        }
+
+        if (!redirectPath.isPresent()) {
+            redirectPath = Optional.
+                    ofNullable(ssoSPConfigProperties.getProperty(SSOValveConstants.REDIRECT_PATH_AFTER_SLO));
+        }
+
+        if ((redirectPath.isPresent()) && (!redirectPath.get().isEmpty())) {
+            redirectPath = Optional.ofNullable(request.getContext().getPath().concat(redirectPath.get()));
         } else {
-            redirectPath = request.getContext().getPath();
+            redirectPath = Optional.ofNullable(request.getContext().getPath());
         }
 
-        /*if (log.isDebugEnabled()) {
-            log.debug("Redirect path = " + redirectPath);
-        }*/
+        getLogger().log(Level.FINE, "Redirect path = " + redirectPath);
 
-        return redirectPath;
+        return redirectPath.get();
     }
 }

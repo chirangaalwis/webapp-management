@@ -54,7 +54,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 /**
- * This class contains utility methods used for the implementation of the single-sign-on agent.
+ * This class contains utility methods used for the implementation of the single-sign-on (SSO) agent.
  *
  * @since 6.0.0
  */

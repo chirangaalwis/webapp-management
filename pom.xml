@@ -75,9 +75,9 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.apache.tomcat</groupId>
-                <artifactId>catalina</artifactId>
-                <version>${tomcat.catalina.version}</version>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.embed.core.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.opensaml</groupId>
@@ -108,7 +108,7 @@
     </dependencyManagement>
 
     <properties>
-        <tomcat.catalina.version>6.0.44</tomcat.catalina.version>
+        <tomcat.embed.core.version>8.0.24</tomcat.embed.core.version>
         <org.opensaml.version>2.6.4</org.opensaml.version>
         <org.joda.time.version>2.9.1</org.joda.time.version>
         <com.google.code.gson.version>2.5</com.google.code.gson.version>
