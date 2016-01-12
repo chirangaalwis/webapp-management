@@ -15,7 +15,6 @@
  */
 package org.wso2.appserver.webapp.mgt.identity.sso.valve.util;
 
-import org.apache.catalina.realm.MemoryRealm;
 import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
 import org.wso2.appserver.webapp.mgt.identity.sso.valve.SSOValveConstants;
 

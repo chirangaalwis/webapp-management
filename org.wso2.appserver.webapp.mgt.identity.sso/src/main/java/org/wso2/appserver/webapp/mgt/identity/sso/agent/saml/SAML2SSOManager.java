@@ -50,7 +50,7 @@ import javax.servlet.http.HttpSession;
 
 /**
  * This class manages the generation of varied request and response types that are utilized
- * within the SAML 2.0 single-sign-on process.
+ * within the SAML 2.0 single-sign-on (SSO) process.
  */
 public class SAML2SSOManager {
     private static final Logger logger = Logger.getLogger(SSOAgentUtils.class.getName());
@@ -95,12 +95,11 @@ public class SAML2SSOManager {
         } else {
             LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
                     getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
-            if (sessionBean != null) {
-                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO()
-                        .getSubjectId(), sessionBean.getSAML2SSO().getSessionIndex());
+            if (Optional.ofNullable(sessionBean).isPresent()) {
+                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
+                        sessionBean.getSAML2SSO().getSessionIndex());
 
                 //  TODO: LOGOUT REQUEST SIGNATURE
-
             } else {
                 throw new SSOException("SLO Request can not be built. SSO Session is null");
             }
@@ -129,16 +128,6 @@ public class SAML2SSOManager {
                 forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).forEach(
                         parameter -> htmlParameters.append("<input type='hidden' name='").append(filteredEntry.getKey())
                                 .append("' value='").append(parameter).append("'>\n")));
-
-        //  TODO: TO BE TESTED AND REMOVED
-/*        parameters.entrySet().stream().forEach(entry -> {
-            if ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.ofNullable(entry.getValue()).isPresent())
-                    && (entry.getValue().length > 0)) {
-                Stream.of(entry.getValue()).forEach(
-                        parameter -> htmlParameters.append("<input type='hidden' name='").append(entry.getKey()).
-                                append("' value='").append(parameter).append("'>\n"));
-            }
-        });*/
 
         String htmlPayload = getSSOAgentConfig().getSAML2().getPostBindingRequestHTMLPayload();
         if ((!Optional.ofNullable(htmlPayload).isPresent()) || (!htmlPayload.contains("<!--$saml_params-->"))) {
@@ -240,8 +229,8 @@ public class SAML2SSOManager {
 
         //  Gets the subject name from the Response Object and forward it to login_action.jsp
         Optional<String> subject = Optional.empty();
-        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional.
-                ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
+        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) &&
+                (Optional.ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
             subject = Optional.of(assertion.get().getSubject().getNameID().getValue());
         }
         if (!subject.isPresent()) {
@@ -261,8 +250,7 @@ public class SAML2SSOManager {
         // Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(marshall(assertion.get()));
 
-        ((LoggedInSessionBean) request.getSession().getAttribute(
-                SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+        ((LoggedInSessionBean) request.getSession().getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                 setSubjectAttributes(getAssertionStatements(assertion.get()));
 
         //  For removing the session when the single-logout request made by the service provider itself
@@ -346,6 +334,52 @@ public class SAML2SSOManager {
         return authRequest;
     }
 
+    public void performSingleLogout(HttpServletRequest request) throws SSOException {
+        Optional<XMLObject> saml2Object = Optional.empty();
+
+        if (Optional.ofNullable(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)).
+                isPresent()) {
+            saml2Object = Optional.ofNullable(SSOAgentUtils.unmarshall(new String(
+                    Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)),
+                    Charset.forName("UTF-8"))));
+        }
+        if (!saml2Object.isPresent()) {
+            saml2Object = Optional.ofNullable(SSOAgentUtils.unmarshall(new String(
+                    Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
+                    Charset.forName("UTF-8"))));
+        }
+        if (saml2Object.get() instanceof LogoutRequest) {
+            LogoutRequest logoutRequest = (LogoutRequest) saml2Object.get();
+            logoutRequest.getSessionIndexes().stream().findFirst().ifPresent(
+                    sessionIndex -> SSOAgentSessionManager.invalidateAllSessions(sessionIndex.getSessionIndex()).
+                            stream().forEach(HttpSession::invalidate));
+        } else if (saml2Object.get() instanceof LogoutResponse) {
+            if (request.getSession(false) != null) {
+                /**
+                 * Not invalidating session explicitly since there may be other listeners
+                 * still waiting to get triggered and at the end of the chain session needs to be
+                 * invalidated by the system
+                 */
+                Set<HttpSession> sessions =
+                        SSOAgentSessionManager.invalidateAllSessions(request.getSession(false));
+                for (HttpSession session : sessions) {
+                    try {
+                        session.invalidate();
+                    } catch (IllegalStateException ignore) {
+
+                        /*if (log.isDebugEnabled()) {
+                            log.debug("Ignoring exception : ", ignore);
+                        }*/
+                        //ignore
+                        //session is already invalidated
+                    }
+                }
+            }
+        } else {
+            throw new SSOException("Invalid SAML2 Single Logout Request/Response");
+        }
+    }
+
     protected LogoutRequest buildLogoutRequest(String user, String sessionIdx) throws SSOException {
 
         LogoutRequest logoutReq = new LogoutRequestBuilder().buildObject();
@@ -376,51 +410,6 @@ public class SAML2SSOManager {
         return logoutReq;
     }
 
-    public void performSingleLogout(HttpServletRequest request) throws SSOException {
-
-        XMLObject saml2Object = null;
-        if (request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST) != null) {
-            saml2Object = SSOAgentUtils.unmarshall(new String(Base64.decode(request.getParameter(
-                    SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)), Charset.forName("UTF-8")));
-        }
-        if (saml2Object == null) {
-            saml2Object = SSOAgentUtils.unmarshall(new String(Base64.decode(request.getParameter(
-                    SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)), Charset.forName("UTF-8")));
-        }
-        if (saml2Object instanceof LogoutRequest) {
-            LogoutRequest logoutRequest = (LogoutRequest) saml2Object;
-            String sessionIndex = logoutRequest.getSessionIndexes().get(0).getSessionIndex();
-            Set<HttpSession> sessions = SSOAgentSessionManager.invalidateAllSessions(sessionIndex);
-            for (HttpSession session : sessions) {
-                session.invalidate();
-            }
-        } else if (saml2Object instanceof LogoutResponse) {
-            if (request.getSession(false) != null) {
-                /**
-                 * Not invalidating session explicitly since there may be other listeners
-                 * still waiting to get triggered and at the end of the chain session needs to be
-                 * invalidated by the system
-                 */
-                Set<HttpSession> sessions =
-                        SSOAgentSessionManager.invalidateAllSessions(request.getSession(false));
-                for (HttpSession session : sessions) {
-                    try {
-                        session.invalidate();
-                    } catch (IllegalStateException ignore) {
-
-                        /*if (log.isDebugEnabled()) {
-                            log.debug("Ignoring exception : ", ignore);
-                        }*/
-                        //ignore
-                        //session is already invalidated
-                    }
-                }
-            }
-        } else {
-            throw new SSOException("Invalid SAML2 Single Logout Request/Response");
-        }
-    }
-
 
 
 
@@ -446,6 +435,9 @@ public class SAML2SSOManager {
             throw new SSOException("Error in marshalling SAML2 Assertion", e);
         }
     }
+
+
+
 
     /**
      * Loads a custom signature validator class specified in the SSO Agent configurations.
@@ -509,14 +501,19 @@ public class SAML2SSOManager {
         }
     }
 
-    //  TODO: ADD JAVADOC COMMENTS
+    /**
+     * Returns SAML 2.0 Assertion Attribute Statement content.
+     *
+     * @param assertion the SAML 2.0 Assertion whose content is to be returned
+     * @return Attribute Statement content of the SAML 2.0 Assertion specified
+     */
     private Map<String, String> getAssertionStatements(Assertion assertion) {
         Map<String, String> results = new HashMap<>();
-        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements()).
-                isPresent())) {
+        if ((Optional.ofNullable(assertion).isPresent()) &&
+                (Optional.ofNullable(assertion.getAttributeStatements()).isPresent())) {
             Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
-            attributeStatements.
-                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
+            attributeStatements.forEach(attributeStatement ->
+                    attributeStatement.getAttributes().stream().forEach(attribute -> {
                         Element value = attribute.getAttributeValues().get(0).getDOM();
                         String attributeValue = value.getTextContent();
                         results.put(attribute.getName(), attributeValue);

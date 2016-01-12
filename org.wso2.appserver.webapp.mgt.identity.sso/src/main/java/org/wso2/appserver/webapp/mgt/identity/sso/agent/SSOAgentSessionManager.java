@@ -23,31 +23,33 @@ public class SSOAgentSessionManager {
         return ssoSessionsMap;
     }
 
-    private static void setSSOSessionsMap(Map<String, Set<HttpSession>> ssoSessionsMap) {
-        SSOAgentSessionManager.ssoSessionsMap = ssoSessionsMap;
-    }
 
+    //  TODO: JAVADOC COMMENTS
     public static Set<HttpSession> invalidateAllSessions(HttpSession session) {
-        LoggedInSessionBean sessionBean = (LoggedInSessionBean) session.getAttribute(
-                SSOAgentConstants.SESSION_BEAN_NAME);
-        Set<HttpSession> sessions = new HashSet<HttpSession>();
-        if (sessionBean != null && sessionBean.getSAML2SSO() != null) {
+        LoggedInSessionBean sessionBean = (LoggedInSessionBean) session.
+                getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
+        Set<HttpSession> sessions = new HashSet<>();
+        if ((Optional.ofNullable(sessionBean).isPresent()) && (Optional.ofNullable(sessionBean.getSAML2SSO()).
+                isPresent())) {
             String sessionIndex = sessionBean.getSAML2SSO().getSessionIndex();
-            if (sessionIndex != null) {
-                sessions = ssoSessionsMap.remove(sessionIndex);
+            if (Optional.ofNullable(sessionIndex).isPresent()) {
+                sessions = getSSOSessionsMap().remove(sessionIndex);
             }
         }
-        if (sessions == null) {
-            sessions = new HashSet<HttpSession>();
-        }
+        sessions = Optional.ofNullable(sessions).orElse(new HashSet<>());
         return sessions;
     }
 
+    /**
+     * Invalidates all the sessions associated with a specified session index from the global single-sign-on (SSO)
+     * agent session manager map.
+     *
+     * @param sessionIndex the session index of whom all sessions are to be invalidated
+     * @return set of sessions associated with the session index
+     */
     public static Set<HttpSession> invalidateAllSessions(String sessionIndex) {
-        Set<HttpSession> sessions = ssoSessionsMap.remove(sessionIndex);
-        if (sessions == null) {
-            sessions = new HashSet<HttpSession>();
-        }
+        Set<HttpSession> sessions = getSSOSessionsMap().remove(sessionIndex);
+        sessions = Optional.ofNullable(sessions).orElse(new HashSet<>());
         return sessions;
     }
 

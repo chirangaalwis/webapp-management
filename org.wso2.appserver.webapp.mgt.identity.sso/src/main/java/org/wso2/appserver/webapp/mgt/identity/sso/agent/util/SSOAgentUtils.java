@@ -60,13 +60,12 @@ import javax.xml.parsers.ParserConfigurationException;
  */
 public class SSOAgentUtils {
     private static final Logger logger = Logger.getLogger(SSOAgentUtils.class.getName());
-    private static final Random RANDOM;
+    private static final Random random = new Random();
 
     private static boolean bootStrapped;
 
     //  a static field initialization block
     static {
-        RANDOM = new Random();
         setBootStrapped(false);
     }
 
@@ -75,7 +74,7 @@ public class SSOAgentUtils {
     }
 
     private static Random getRandom() {
-        return RANDOM;
+        return random;
     }
 
     private static boolean isBootStrapped() {

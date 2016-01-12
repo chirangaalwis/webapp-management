@@ -54,9 +54,7 @@
                 <configuration>
                     <artifactSet>
                         <excludes>
-                            <exclude>org.apache.tomcat:catalina</exclude>
-                            <exclude>org.apache.tomcat:coyote</exclude>
-                            <exclude>org.apache.tomcat:servlet-api</exclude>
+                            <exclude>org.apache.tomcat.embed:tomcat-embed-core</exclude>
                             <exclude>org.bouncycastle:bcprov-jdk15on</exclude>
                             <exclude>commons-lang:commons-lang</exclude>
                         </excludes>
@@ -69,8 +67,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.tomcat</groupId>
-            <artifactId>catalina</artifactId>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.opensaml</groupId>
