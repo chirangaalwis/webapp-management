@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.google.gson.annotations.SerializedName;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Response;
 import org.wso2.appserver.webapp.security.sso.SSOException;
-import org.wso2.appserver.webapp.security.sso.util.SSOAgentUtils;
+import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -28,9 +28,14 @@ import java.util.Map;
 import java.util.Optional;
 import javax.xml.bind.annotation.XmlAttribute;
 
+/**
+ * A Java Bean class which represents a user logged-in session.
+ *
+ * @since 6.0.0
+ */
 public class LoggedInSessionBean implements Serializable {
     private static final long serialVersionUID = 7762835859870143767L;
-    private static final String EMPTY_STRING = "";
+    private static final String emptyString = "";
 
     private SAML2SSO saml2SSO;
 
@@ -42,6 +47,9 @@ public class LoggedInSessionBean implements Serializable {
         this.saml2SSO = saml2SSO;
     }
 
+    /**
+     * A nested static class which represents an access token.
+     */
     public static class AccessTokenResponseBean implements Serializable {
         @XmlAttribute(name = "access_token")
         @SerializedName("access_token")
@@ -114,6 +122,10 @@ public class LoggedInSessionBean implements Serializable {
         }
     }
 
+    /**
+     * A static nested class which represents the SAML 2.0 specific single-sign-on (SSO) details to be held
+     * in a user logged-in session.
+     */
     public static class SAML2SSO implements Serializable {
         private String subjectId;
         private Response response;
@@ -188,6 +200,18 @@ public class LoggedInSessionBean implements Serializable {
             this.accessTokenResponseBean = accessTokenResponseBean;
         }
 
+        //  These are the two default methods which would be executed during the serialization and deserialization
+        //  process of a LoggedInSessionBean instance
+
+        /**
+         * Writes this {@code LoggedInSessionBean} instance to the specified {@code ObjectOutputStream}.
+         * </p>
+         * This is the default {@code writeObject} method executed during the serialization process of this instance.
+         *
+         * @param stream the {@link java.io.ObjectOutputStream} to which this LoggedInSessionBean instance is to be
+         *               written
+         * @throws IOException if there are I/O errors while writing to the underlying stream
+         */
         private void writeObject(java.io.ObjectOutputStream stream) throws IOException {
             stream.writeObject(getSubjectId());
             stream.writeObject(getResponseString());
@@ -196,29 +220,40 @@ public class LoggedInSessionBean implements Serializable {
             if (Optional.ofNullable(getAccessTokenResponseBean()).isPresent()) {
                 stream.writeObject(getAccessTokenResponseBean().serialize());
             } else {
-                stream.writeObject(EMPTY_STRING);
+                stream.writeObject(emptyString);
             }
             stream.writeObject(getSubjectAttributes());
         }
 
+        /**
+         * Reads this {@code LoggedInSessionBean} instance to the specified {@code ObjectInputStream}.
+         * </p>
+         * This is the default {@code readObject} method executed during the deSerialization process of this instance.
+         *
+         * @param stream the serialized {@link java.io.ObjectInputStream} from which the LoggedInSessionBean instance is
+         *               to be read
+         * @throws IOException            if I/O errors occurred while reading from the underlying stream
+         * @throws ClassNotFoundException if class definition of a serialized object is not found
+         * @throws SSOException           if an error occurs during unmarshalling
+         */
         private void readObject(java.io.ObjectInputStream stream)
                 throws IOException, ClassNotFoundException, SSOException {
             setSubjectId((String) stream.readObject());
 
             setResponseString((String) stream.readObject());
-            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!EMPTY_STRING.equals(getResponseString()))) {
-                setSAMLResponse((Response) SSOAgentUtils.unmarshall(getResponseString()));
+            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!emptyString.equals(getResponseString()))) {
+                setSAMLResponse((Response) SSOUtils.unmarshall(getResponseString()));
             }
 
             setAssertionString((String) stream.readObject());
-            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!EMPTY_STRING.
+            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!emptyString.
                     equals(getAssertionString()))) {
-                setAssertion((Assertion) SSOAgentUtils.unmarshall(assertionString));
+                setAssertion((Assertion) SSOUtils.unmarshall(assertionString));
             }
 
             setSessionIndex((String) stream.readObject());
             String accessTokenResponseBeanString = (String) stream.readObject();
-            if (!EMPTY_STRING.equals(accessTokenResponseBeanString)) {
+            if (!emptyString.equals(accessTokenResponseBeanString)) {
                 setAccessTokenResponseBean(getAccessTokenResponseBean().deSerialize(accessTokenResponseBeanString));
             } else {
                 setAccessTokenResponseBean(null);

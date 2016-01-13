@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ public class SSOConstants {
     public static final String SESSION_BEAN_NAME = "org.wso2.carbon.identity.sso.agent.LoggedInSessionBean";
 
     /**
-     * Prevents instantiating the SSOConstants class
+     * Prevents instantiating the SSOConstants class.
      */
     private SSOConstants() {
     }
@@ -38,7 +38,7 @@ public class SSOConstants {
         public static final String HTTP_POST_PARAM_SAML2_RESPONSE = "SAMLResponse";
 
         /**
-         * Prevents instantiating the SAML2SSO nested class
+         * Prevents instantiating the SAML2SSO nested class.
          */
         private SAML2SSO() {
         }
@@ -48,15 +48,11 @@ public class SSOConstants {
      * This class defines the single-sign-on (SSO) agent configuration property name constants.
      */
     public static class SSOAgentConfiguration {
-        public static final String ENABLE_SAML2_SSO_LOGIN = "EnableSAML2SSOLogin";
-        public static final String ENABLE_OAUTH2_SAML2_OAUTH2_GRANT = "EnableOAuth2SAML2Grant";
-        public static final String SAML2_SSO_URL = "SAML2SSOURL";
-        public static final String OAUTH2_SAML2_GRANT_URL = "OAuth2SAML2GrantURL";
         public static final String SKIP_URIS = "SkipURIs";
         public static final String QUERY_PARAMS = "QueryParams";
 
         /**
-         * Prevents instantiating the SSOAgentConfiguration nested class
+         * Prevents instantiating the SSOAgentConfiguration nested class.
          */
         private SSOAgentConfiguration() {
         }
@@ -65,6 +61,9 @@ public class SSOConstants {
          * This class defines the SAML 2.0 specific single-sign-on (SSO) configuration property name constants.
          */
         public static class SAML2 {
+            public static final String ENABLE_SAML2_SSO_LOGIN = "EnableSAML2SSOLogin";
+            public static final String SAML2_SSO_URL = "SAML2SSOURL";
+
             public static final String HTTP_BINDING = "SAML2.HTTPBinding";
             public static final String SP_ENTITY_ID = "SAML2.SPEntityId";
             public static final String ACS_URL = "SAML2.AssertionConsumerURL";
@@ -84,7 +83,7 @@ public class SSOConstants {
             public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
 
             /**
-             * Prevents instantiating the SAML2 nested class
+             * Prevents instantiating the SAML2 nested class.
              */
             private SAML2() {
             }
@@ -94,12 +93,15 @@ public class SSOConstants {
          * This class defines the OAuth 2.0 specific single-sign-on (SSO) configuration property name constants.
          */
         public static class OAuth2 {
+            public static final String ENABLE_OAUTH2_SAML2_OAUTH2_GRANT = "EnableOAuth2SAML2Grant";
+            public static final String OAUTH2_SAML2_GRANT_URL = "OAuth2SAML2GrantURL";
+
             public static final String CLIENT_ID = "OAuth2.ClientId";
             public static final String CLIENT_SECRET = "OAuth2.ClientSecret";
             public static final String TOKEN_URL = "OAuth2.TokenURL";
 
             /**
-             * Prevents instantiating the OAuth2 nested class
+             * Prevents instantiating the OAuth2 nested class.
              */
             private OAuth2() {
             }
@@ -109,18 +111,18 @@ public class SSOConstants {
     /**
      * This class defines constants used in the implementation of the SAML 2.0 single-sign-on (SSO) valve.
      */
-    public static class SSOValveConstants {
-        //  environmental variable property name constant
-        public static final String CATALINA_HOME = "catalina.home";
-        //  context parameter property name constant
+    public static class SAMLSSOValveConstants {
+        //  Environmental variable property name constant
+        public static final String CATALINA_BASE = "catalina.base";
+        //  Context parameter property name constant
         public static final String ENABLE_SAML2_SSO = "enable.saml2.sso";
-        //  file path related constants
+        //  File path related constants
         public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
         public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
-        //  http servlet request session notes' property name and attribute name constants
+        //  HTTP servlet request session notes' property name and attribute name constants
         public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";
-        //  sso configuration property name constants
+        //  SSO configuration property name constants
         public static final String APP_SERVER_URL = "ApplicationServerURL";
         public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
         public static final String HANDLE_CONSUMER_URL_AFTER_SLO = "handleConsumerURLAfterSLO";
@@ -128,9 +130,9 @@ public class SSOConstants {
         public static final String REDIRECT_PATH_AFTER_SLO = "redirectPathAfterSLO";
 
         /**
-         * Prevents instantiating the SSOValveConstants class.
+         * Prevents instantiating the SAMLSSOValveConstants nested class.
          */
-        private SSOValveConstants() {
+        private SAMLSSOValveConstants() {
         }
     }
 }

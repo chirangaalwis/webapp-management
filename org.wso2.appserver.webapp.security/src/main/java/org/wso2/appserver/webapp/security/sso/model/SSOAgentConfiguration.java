@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.wso2.appserver.webapp.security.sso.model;
 import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
-import org.wso2.appserver.webapp.security.sso.util.SSOAgentUtils;
+import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -140,38 +140,38 @@ public class SSOAgentConfiguration {
     public void initConfig(Properties properties) {
         Optional.ofNullable(properties).ifPresent(configProperties -> {
             Optional<String> isSAML2SSOLoginEnabledString = Optional.ofNullable(configProperties.
-                    getProperty(SSOConstants.SSOAgentConfiguration.ENABLE_SAML2_SSO_LOGIN));
+                    getProperty(SSOConstants.SSOAgentConfiguration.SAML2.ENABLE_SAML2_SSO_LOGIN));
             if (isSAML2SSOLoginEnabledString.isPresent()) {
                 setSAML2SSOLoginEnabled(Boolean.parseBoolean(isSAML2SSOLoginEnabledString.get()));
             } else {
-                getLogger().log(Level.FINE, SSOConstants.SSOAgentConfiguration.ENABLE_SAML2_SSO_LOGIN +
+                getLogger().log(Level.FINE, SSOConstants.SSOAgentConfiguration.SAML2.ENABLE_SAML2_SSO_LOGIN +
                         " not configured. Defaulting to \'false\'.");
                 setSAML2SSOLoginEnabled(false);
             }
 
             Optional<String> isSAML2OAuth2GrantEnabledString = Optional.ofNullable(configProperties.
-                    getProperty(SSOConstants.SSOAgentConfiguration.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT));
+                    getProperty(SSOConstants.SSOAgentConfiguration.OAuth2.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT));
             if (isSAML2OAuth2GrantEnabledString.isPresent()) {
                 setOAuth2SAML2GrantEnabled(Boolean.parseBoolean(isSAML2OAuth2GrantEnabledString.get()));
             } else {
-                getLogger().log(Level.FINE, SSOConstants.SSOAgentConfiguration.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT +
+                getLogger().log(Level.FINE, SSOConstants.SSOAgentConfiguration.OAuth2.ENABLE_OAUTH2_SAML2_OAUTH2_GRANT +
                         " not configured. Defaulting to \'false\'.");
                 setOAuth2SAML2GrantEnabled(false);
             }
 
-            setSAML2SSOURL(configProperties.getProperty(SSOConstants.SSOAgentConfiguration.SAML2_SSO_URL));
+            setSAML2SSOURL(configProperties.getProperty(SSOConstants.SSOAgentConfiguration.SAML2.SAML2_SSO_URL));
             setOAuth2SAML2GrantURL(configProperties.
-                    getProperty(SSOConstants.SSOAgentConfiguration.OAUTH2_SAML2_GRANT_URL));
+                    getProperty(SSOConstants.SSOAgentConfiguration.OAuth2.OAUTH2_SAML2_GRANT_URL));
 
             String skipURIsString = configProperties.getProperty(SSOConstants.SSOAgentConfiguration.SKIP_URIS);
-            if (!SSOAgentUtils.isBlank(skipURIsString)) {
+            if (!SSOUtils.isBlank(skipURIsString)) {
                 String[] skipURIArray = skipURIsString.split(",");
                 Stream.of(skipURIArray).forEach(getSkipURIs()::add);
             }
 
             String queryParameterString = configProperties.
                     getProperty(SSOConstants.SSOAgentConfiguration.QUERY_PARAMS);
-            if (!SSOAgentUtils.isBlank(queryParameterString)) {
+            if (!SSOUtils.isBlank(queryParameterString)) {
                 Map<String, List<String>> queryParameterMap = new HashMap<>();
 
                 Stream.of(queryParameterString.split("&")).
@@ -318,7 +318,7 @@ public class SSOAgentConfiguration {
     public void verifyConfig() throws SSOException {
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(getSAML2SSOURL()).isPresent())) {
             throw new SSOException("\'" +
-                    SSOConstants.SSOAgentConfiguration.SAML2_SSO_URL + "\' not configured.");
+                    SSOConstants.SSOAgentConfiguration.SAML2.SAML2_SSO_URL + "\' not configured.");
         }
 
         if (!isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled()) {
@@ -328,7 +328,7 @@ public class SSOAgentConfiguration {
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() && (!Optional.ofNullable(getOAuth2SAML2GrantURL()).
                 isPresent())) {
             throw new SSOException("\'" +
-                    SSOConstants.SSOAgentConfiguration.OAUTH2_SAML2_GRANT_URL + "\' not configured.");
+                    SSOConstants.SSOAgentConfiguration.OAuth2.OAUTH2_SAML2_GRANT_URL + "\' not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && (!Optional.ofNullable(getSAML2().getSPEntityId()).isPresent())) {

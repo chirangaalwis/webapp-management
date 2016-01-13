@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,14 +21,26 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 
-//  TODO: comments to be written, refactoring and use case
-
 /**
- * A test doc
+ * A custom implementation for resolving external XML entities.
+ * </p>
+ * This class implements the {@code org.xml.sax.EntityResolver} interface.
+ *
+ * @since 6.0.0
  */
 public class XMLEntityResolver implements EntityResolver {
+    /**
+     * Allows the application to resolve external entities.
+     *
+     * @param publicId the public identifier of the external entity being referenced, or null if none was supplied
+     * @param systemId the system identifier of the external entity being referenced
+     * @return an InputSource object describing the new input source, or null to request that the parser open a regular
+     * URI connection to the system identifier
+     * @throws SAXException if XML syntax contains invalid elements
+     * @throws IOException  an error occurred while creating a new InputStream or Reader for the InputSource
+     */
     @Override
     public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
-        throw new SAXException("AuthnRequest contains invalid elements. Possibly an XML External Entity (XXE) attack.");
+        throw new SAXException("XML syntax contains invalid elements. Possibly an XML External Entity (XXE) attack.");
     }
 }

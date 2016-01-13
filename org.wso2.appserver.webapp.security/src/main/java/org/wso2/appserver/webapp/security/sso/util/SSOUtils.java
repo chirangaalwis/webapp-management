@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.opensaml.saml2.core.RequestAbstractType;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.io.Marshaller;
+import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
@@ -30,6 +31,11 @@ import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.bootstrap.DOMImplementationRegistry;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSOutput;
+import org.w3c.dom.ls.LSSerializer;
+import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.xml.sax.SAXException;
 
@@ -40,7 +46,10 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -54,12 +63,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 /**
- * This class contains utility methods used for the implementation of the single-sign-on (SSO) agent.
+ * This class contains utility methods used for the implementation of the single-sign-on (SSO) functionality.
  *
  * @since 6.0.0
  */
-public class SSOAgentUtils {
-    private static final Logger logger = Logger.getLogger(SSOAgentUtils.class.getName());
+public class SSOUtils {
+    private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
     private static final Random random = new Random();
 
     private static boolean bootStrapped;
@@ -82,25 +91,33 @@ public class SSOAgentUtils {
     }
 
     private static void setBootStrapped(boolean bootStrapped) {
-        SSOAgentUtils.bootStrapped = bootStrapped;
+        SSOUtils.bootStrapped = bootStrapped;
     }
 
     /**
-     * Initializes the OpenSAML2 library, if it is not initialized yet.
-     * </p>
-     * Calls the bootstrap method of {@code DefaultBootstrap}.
+     * Returns a {@code Path} instance representing the base of Apache Tomcat instances.
      *
-     * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
+     * @return a {@link Path} instance representing the base of Apache Tomcat instances
+     * @throws SSOException if CATALINA_BASE environmental variable has not been set
      */
-    public static void doBootstrap() throws SSOException {
-        if (!isBootStrapped()) {
-            try {
-                DefaultBootstrap.bootstrap();
-                setBootStrapped(true);
-            } catch (ConfigurationException e) {
-                throw new SSOException("Error in bootstrapping the OpenSAML2 library.", e);
-            }
+    public static Path getCatalinaBase() throws SSOException {
+        String envVariableValue = System.getProperty(SSOConstants.SAMLSSOValveConstants.CATALINA_BASE);
+        if (Optional.ofNullable(envVariableValue).isPresent()) {
+            return Paths.get(envVariableValue);
+        } else {
+            throw new SSOException("CATALINA_BASE environmental variable has not been set.");
         }
+    }
+
+    /**
+     * Returns a {@code Path} instance representing the Apache Tomcat configuration home CATALINA_BASE/conf.
+     *
+     * @return a {@link Path} instance representing the Apache Tomcat configuration home CATALINA_BASE/conf
+     * @throws SSOException if CATALINA_BASE environmental variable has not been set
+     */
+    public static Path getTomcatConfigurationHome() throws SSOException {
+        return Paths.
+                get(getCatalinaBase().toString(), SSOConstants.SAMLSSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
     }
 
     /**
@@ -140,12 +157,52 @@ public class SSOAgentUtils {
     }
 
     /**
+     * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
+     * </p>
+     * An {@code Optional String} id is returned based on the context path provided.
+     *
+     * @param contextPath the context path of the service provider application
+     * @return a unique id value for the SAML 2.0 service provider application based on its context path
+     */
+    public static Optional generateIssuerID(String contextPath) {
+        if (Optional.ofNullable(contextPath).isPresent()) {
+            String issuerId = contextPath.replaceFirst("/webapps", "").replace("/", "_");
+            if (issuerId.startsWith("_")) {
+                issuerId = issuerId.substring(1);
+            }
+            return Optional.of(issuerId);
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Returns a SAML 2.0 Assertion Consumer URL based on service provider application context path.
+     * </p>
+     * An {@code Optional String} URL is returned based on the context path and configuration properties provided.
+     *
+     * @param contextPath           the context path of the service provider application
+     * @param ssoSPConfigProperties the global single-sign-on configuration properties
+     * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path
+     */
+    public static Optional generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
+        if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).
+                isPresent())) {
+            return Optional.of(ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.APP_SERVER_URL)
+                    + contextPath +
+                    ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.CONSUMER_URL_POSTFIX));
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Sends character data specified by the {@code htmlPayload} in the servlet response body.
      *
      * @param response    the servlet response body in which character data are to be sent
      * @param htmlPayload the character data to be sent in the servlet body
      * @throws SSOException if an error occurs while writing character data to the servlet
-     *                           response body
+     *                      response body
      */
     public static void sendCharacterData(HttpServletResponse response, String htmlPayload) throws SSOException {
         try {
@@ -155,6 +212,24 @@ public class SSOAgentUtils {
             //  Not closing the Writer instance, as its creator is the HttpServletResponse
         } catch (IOException e) {
             throw new SSOException("Error occurred while writing to HttpServletResponse.", e);
+        }
+    }
+
+    /**
+     * Initializes the OpenSAML2 library, if it is not initialized yet.
+     * </p>
+     * Calls the bootstrap method of {@code DefaultBootstrap}.
+     *
+     * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
+     */
+    public static void doBootstrap() throws SSOException {
+        if (!isBootStrapped()) {
+            try {
+                DefaultBootstrap.bootstrap();
+                setBootStrapped(true);
+            } catch (ConfigurationException e) {
+                throw new SSOException("Error in bootstrapping the OpenSAML2 library.", e);
+            }
         }
     }
 
@@ -174,7 +249,7 @@ public class SSOAgentUtils {
             //  Marshall this element, and its children, and root them in a newly created Document
             authDOM = marshaller.marshall(requestMessage);
         } catch (MarshallingException e) {
-            throw new SSOException("Error occurred while encoding SAML2 request. Failed to marshall the SAML 2.0 " +
+            throw new SSOException("Error occurred while encoding SAML2 request. Failed to marshall the SAML 2.0. " +
                     "Request element XMLObject to its corresponding W3C DOM element.", e);
         }
 
@@ -207,16 +282,43 @@ public class SSOAgentUtils {
     }
 
     /**
-     * Returns a SAML 2.0 based XML object from the {@code String} value representing the XML syntax.
+     * Serializes the specified SAML 2.0 based XML content representation to its corresponding actual XML syntax
+     * representation.
+     *
+     * @param xmlObject the SAML 2.0 based XML content object
+     * @return a {@link String} representation of the actual XML representation of the SAML 2.0 based XML content
+     * representation
+     * @throws SSOException if an error occurs during the marshalling process
+     */
+    public static String marshall(XMLObject xmlObject) throws SSOException {
+        try {
+            //  Explicitly sets the special XML parser library to be used, in the global variables
+            System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
+                    "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
+            MarshallerFactory marshallerFactory = Configuration.getMarshallerFactory();
+            Marshaller marshaller = marshallerFactory.getMarshaller(xmlObject);
+            Element element = marshaller.marshall(xmlObject);
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            DOMImplementationRegistry registry = DOMImplementationRegistry.newInstance();
+            DOMImplementationLS implementation = (DOMImplementationLS) registry.getDOMImplementation("LS");
+            LSSerializer writer = implementation.createLSSerializer();
+            LSOutput output = implementation.createLSOutput();
+            output.setByteStream(byteArrayOutputStream);
+            writer.write(element, output);
+            return new String(byteArrayOutputStream.toByteArray(), Charset.forName("UTF-8"));
+        } catch (ClassNotFoundException | InstantiationException | MarshallingException | IllegalAccessException e) {
+            throw new SSOException("Error in marshalling SAML2 Assertion.", e);
+        }
+    }
+
+    /**
+     * Returns a SAML 2.0 based XML content representation from the {@code String} value representing the XML syntax.
      *
      * @param xmlString the {@link String} representation of the XML content
      * @return an XML object from the {@link String} value representing the XML syntax
      * @throws SSOException if an error occurs when unmarshalling the XML string representation
      */
     public static XMLObject unmarshall(String xmlString) throws SSOException {
-        //  TODO: analyze the possibility of using dom4j or jdom instead of Java DOM parser
-        //  TODO: issue related to expanding entity references - dom4j namespace aware by default
-        //  TODO: java docs for entity resolver
         doBootstrap();
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setExpandEntityReferences(false);
