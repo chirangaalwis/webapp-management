@@ -13,15 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent.model;
+package org.wso2.appserver.webapp.security.sso.model;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.Response;
-import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.util.SSOAgentUtils;
+import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.util.SSOAgentUtils;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -31,6 +30,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 
 public class LoggedInSessionBean implements Serializable {
     private static final long serialVersionUID = 7762835859870143767L;
+    private static final String EMPTY_STRING = "";
 
     private SAML2SSO saml2SSO;
 
@@ -196,7 +196,7 @@ public class LoggedInSessionBean implements Serializable {
             if (Optional.ofNullable(getAccessTokenResponseBean()).isPresent()) {
                 stream.writeObject(getAccessTokenResponseBean().serialize());
             } else {
-                stream.writeObject(SSOAgentConstants.SAML2SSO.EMPTY_STRING);
+                stream.writeObject(EMPTY_STRING);
             }
             stream.writeObject(getSubjectAttributes());
         }
@@ -206,18 +206,19 @@ public class LoggedInSessionBean implements Serializable {
             setSubjectId((String) stream.readObject());
 
             setResponseString((String) stream.readObject());
-            if((Optional.ofNullable(getResponseString()).isPresent()) && (!SSOAgentConstants.SAML2SSO.EMPTY_STRING.equals(getResponseString()))) {
+            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!EMPTY_STRING.equals(getResponseString()))) {
                 setSAMLResponse((Response) SSOAgentUtils.unmarshall(getResponseString()));
             }
 
             setAssertionString((String) stream.readObject());
-            if((Optional.ofNullable(getResponseString()).isPresent()) && (!SSOAgentConstants.SAML2SSO.EMPTY_STRING.equals(getAssertionString()))) {
+            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!EMPTY_STRING.
+                    equals(getAssertionString()))) {
                 setAssertion((Assertion) SSOAgentUtils.unmarshall(assertionString));
             }
 
             setSessionIndex((String) stream.readObject());
             String accessTokenResponseBeanString = (String) stream.readObject();
-            if (!SSOAgentConstants.SAML2SSO.EMPTY_STRING.equals(accessTokenResponseBeanString)) {
+            if (!EMPTY_STRING.equals(accessTokenResponseBeanString)) {
                 setAccessTokenResponseBean(getAccessTokenResponseBean().deSerialize(accessTokenResponseBeanString));
             } else {
                 setAccessTokenResponseBean(null);

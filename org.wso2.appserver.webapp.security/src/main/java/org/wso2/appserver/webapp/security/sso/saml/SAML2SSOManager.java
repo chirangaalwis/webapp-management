@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent.saml;
+package org.wso2.appserver.webapp.security.sso.saml;
 
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLVersion;
@@ -32,12 +32,12 @@ import org.w3c.dom.bootstrap.DOMImplementationRegistry;
 import org.w3c.dom.ls.DOMImplementationLS;
 import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
-import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentConstants;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.SSOAgentSessionManager;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.LoggedInSessionBean;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.util.SSOAgentUtils;
+import org.wso2.appserver.webapp.security.sso.SSOConstants;
+import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentSessionManager;
+import org.wso2.appserver.webapp.security.sso.model.LoggedInSessionBean;
+import org.wso2.appserver.webapp.security.sso.model.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.security.sso.util.SSOAgentUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.Charset;
@@ -94,7 +94,7 @@ public class SAML2SSOManager {
             }*/
         } else {
             LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
-                    getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
+                    getAttribute(SSOConstants.SESSION_BEAN_NAME);
             if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
                         sessionBean.getSAML2SSO().getSessionIndex());
@@ -110,7 +110,7 @@ public class SAML2SSOManager {
 
         Map<String, String[]> parameters = new HashMap<>();
         parameters.
-                put(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST, new String[] { encodedRequestMessage });
+                put(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST, new String[] { encodedRequestMessage });
         if (Optional.ofNullable(getSSOAgentConfig().getSAML2().getRelayState()).isPresent()) {
             parameters.put(RelayState.DEFAULT_ELEMENT_LOCAL_NAME,
                     new String[] { getSSOAgentConfig().getSAML2().getRelayState() });
@@ -161,7 +161,7 @@ public class SAML2SSOManager {
      * @throws SSOException if SAML 2.0 response is null
      */
     public void processResponse(HttpServletRequest request) throws SSOException {
-        String saml2SSOResponse = request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE);
+        String saml2SSOResponse = request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE);
 
         if (Optional.ofNullable(saml2SSOResponse).isPresent()) {
             String decodedResponse = new String(Base64.decode(saml2SSOResponse), Charset.forName("UTF-8"));
@@ -195,7 +195,7 @@ public class SAML2SSOManager {
         sessionBean.setSAML2SSO(new LoggedInSessionBean.SAML2SSO());
 
         String saml2ResponseString = new String(
-                Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
+                Base64.decode(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
                 Charset.forName("UTF-8"));
         Response saml2Response = (Response) SSOAgentUtils.unmarshall(saml2ResponseString);
         sessionBean.getSAML2SSO().setResponseString(saml2ResponseString);
@@ -239,7 +239,7 @@ public class SAML2SSOManager {
 
         //  Sets the subject in the session bean
         sessionBean.getSAML2SSO().setSubjectId(subject.get());
-        request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
+        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
 
         //  Validates the audience restriction
         validateAudienceRestriction(assertion.get());
@@ -250,7 +250,7 @@ public class SAML2SSOManager {
         // Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(marshall(assertion.get()));
 
-        ((LoggedInSessionBean) request.getSession().getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+        ((LoggedInSessionBean) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                 setSubjectAttributes(getAssertionStatements(assertion.get()));
 
         //  For removing the session when the single-logout request made by the service provider itself
@@ -261,11 +261,11 @@ public class SAML2SSOManager {
                 throw new SSOException("Single Logout is enabled but IdP Session ID not found in SAML2 Assertion");
             }
             ((LoggedInSessionBean) request.getSession().
-                    getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().setSessionIndex(sessionId.get());
+                    getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().setSessionIndex(sessionId.get());
             SSOAgentSessionManager.addAuthenticatedSession(request.getSession(false));
         }
 
-        request.getSession().setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
+        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
     }
 
     /**
@@ -276,23 +276,29 @@ public class SAML2SSOManager {
      */
     private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
         //  Issuer identifies the entity that generated the request message
-        Issuer issuer = new IssuerBuilder().buildObject();
+
+//        Issuer issuer = new IssuerBuilder().buildObject();
+        Issuer issuer = new IssuerBuilder().buildObject("urn:oasis:names:tc:SAML:2.0:assertion", "Issuer", "samlp");
         issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
 
         //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
         NameIDPolicy nameIdPolicy = new NameIDPolicyBuilder().buildObject();
         //  URI reference corresponding to a name identifier format
-        nameIdPolicy.setFormat(SSOAgentConstants.SAML2SSO.AUTH_REQUEST_NAME_ID_POLICY_FORMAT);
+        nameIdPolicy.setFormat("urn:oasis:names:tc:SAML:2.0:nameid-format:persistent");
         //  Unique identifier of the service provider or affiliation of providers for whom the identifier was generated
-        nameIdPolicy.setSPNameQualifier(SSOAgentConstants.SAML2SSO.AUTH_REQUEST_SERVICE_PROVIDER_NAME_QUALIFIER);
+        nameIdPolicy.setSPNameQualifier("Issuer");
         //  Identity provider is allowed, in the course of fulfilling the request to generate a new identifier to
         //  represent the principal
         nameIdPolicy.setAllowCreate(true);
 
         //  This represents a URI reference identifying an authentication context class that describes the
         //  authentication context declaration that follows
-        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
-        authnContextClassRef.setAuthnContextClassRef(SSOAgentConstants.SAML2SSO.AUTH_CONTEXT_CLASS_URI_REFERENCE);
+
+//        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
+        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().
+                buildObject("urn:oasis:names:tc:SAML:2.0:assertion", "AuthnContextClassRef", "saml");
+        authnContextClassRef.
+                setAuthnContextClassRef("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
 
         //  Specifies the authentication context requirements of authentication statements returned in response
         //  to a request or query
@@ -305,7 +311,10 @@ public class SAML2SSOManager {
         DateTime issueInstant = new DateTime();
 
         //  Create an AuthnRequest instance
-        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+
+//        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+        AuthnRequest authRequest = new AuthnRequestBuilder().
+                buildObject("urn:oasis:names:tc:SAML:2.0:protocol", "AuthnRequest", "samlp");
 
         authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
         authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
@@ -334,18 +343,24 @@ public class SAML2SSOManager {
         return authRequest;
     }
 
+    /**
+     * Performs single-logout (SLO) function based on the HTTP servlet request.
+     *
+     * @param request the HTTP servlet request
+     * @throws SSOException if the SAML 2.0 Single Logout Request/Response is invalid
+     */
     public void performSingleLogout(HttpServletRequest request) throws SSOException {
         Optional<XMLObject> saml2Object = Optional.empty();
 
-        if (Optional.ofNullable(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)).
+        if (Optional.ofNullable(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)).
                 isPresent()) {
             saml2Object = Optional.ofNullable(SSOAgentUtils.unmarshall(new String(
-                    Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)),
+                    Base64.decode(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)),
                     Charset.forName("UTF-8"))));
         }
         if (!saml2Object.isPresent()) {
             saml2Object = Optional.ofNullable(SSOAgentUtils.unmarshall(new String(
-                    Base64.decode(request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
+                    Base64.decode(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
                     Charset.forName("UTF-8"))));
         }
         if (saml2Object.get() instanceof LogoutRequest) {
@@ -354,29 +369,21 @@ public class SAML2SSOManager {
                     sessionIndex -> SSOAgentSessionManager.invalidateAllSessions(sessionIndex.getSessionIndex()).
                             stream().forEach(HttpSession::invalidate));
         } else if (saml2Object.get() instanceof LogoutResponse) {
-            if (request.getSession(false) != null) {
-                /**
-                 * Not invalidating session explicitly since there may be other listeners
-                 * still waiting to get triggered and at the end of the chain session needs to be
-                 * invalidated by the system
-                 */
-                Set<HttpSession> sessions =
-                        SSOAgentSessionManager.invalidateAllSessions(request.getSession(false));
-                for (HttpSession session : sessions) {
+            Optional.ofNullable(request.getSession(false)).ifPresent(session -> {
+                //  Not invalidating session explicitly since there may be other listeners
+                //  still waiting to get triggered and at the end of the chain session needs to be
+                //  invalidated by the system.
+                Set<HttpSession> sessions = SSOAgentSessionManager.invalidateAllSessions(request.getSession(false));
+                sessions.stream().forEach(httpSession -> {
                     try {
-                        session.invalidate();
+                        httpSession.invalidate();
                     } catch (IllegalStateException ignore) {
-
-                        /*if (log.isDebugEnabled()) {
-                            log.debug("Ignoring exception : ", ignore);
-                        }*/
-                        //ignore
-                        //session is already invalidated
+                        getLogger().log(Level.FINE, "Ignoring exception : ", ignore);
                     }
-                }
-            }
+                });
+            });
         } else {
-            throw new SSOException("Invalid SAML2 Single Logout Request/Response");
+            throw new SSOException("Invalid SAML2 Single Logout Request/Response.");
         }
     }
 

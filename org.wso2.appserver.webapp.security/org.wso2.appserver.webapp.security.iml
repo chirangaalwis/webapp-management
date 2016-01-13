@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/../org.wso2.appserver.webapp.authenticator/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/../org.wso2.appserver.webapp.authenticator/src/test/java" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/../org.wso2.appserver.webapp.authenticator/target" />
+      <excludeFolder url="file://$MODULE_DIR$/../org.wso2.appserver.webapp.mgt.identity.sso/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

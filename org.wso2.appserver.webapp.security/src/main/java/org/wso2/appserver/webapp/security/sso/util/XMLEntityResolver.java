@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent.util;
+package org.wso2.appserver.webapp.security.sso.util;
 
 import org.xml.sax.EntityResolver;
 import org.xml.sax.InputSource;

@@ -13,10 +13,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent;
+package org.wso2.appserver.webapp.security.sso.agent;
 
 import org.opensaml.common.xml.SAMLConstants;
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.security.sso.SSOConstants;
+import org.wso2.appserver.webapp.security.sso.model.SSOAgentConfiguration;
 
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
@@ -75,7 +76,7 @@ public class SSOAgentRequestResolver {
      */
     public boolean isSAML2SSOResponse() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
-                getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)).isPresent());
+                getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)).isPresent());
     }
 
     /**
@@ -83,9 +84,9 @@ public class SSOAgentRequestResolver {
      *
      * @return true if the request is an identity provider initiated SAML 2.0 single-logout (SLO) request, else false
      */
-    public boolean isSLORequest() {
+    public boolean isSAML2SLORequest() {
         return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
-                getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)).isPresent());
+                getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST)).isPresent());
     }
 
     /**

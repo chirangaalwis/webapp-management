@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.mgt.identity.sso.agent.util;
+package org.wso2.appserver.webapp.security.sso.util;
 
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
@@ -30,7 +30,7 @@ import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.wso2.appserver.webapp.mgt.identity.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;

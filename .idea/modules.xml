@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/org.wso2.appserver.webapp.mgt.identity.sso.iml" filepath="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/org.wso2.appserver.webapp.mgt.identity.sso.iml" />
+      <module fileurl="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/org.wso2.appserver.webapp.security.iml" filepath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/org.wso2.appserver.webapp.security.iml" />
       <module fileurl="file://$PROJECT_DIR$/webapp-management.iml" filepath="$PROJECT_DIR$/webapp-management.iml" />
     </modules>
   </component>

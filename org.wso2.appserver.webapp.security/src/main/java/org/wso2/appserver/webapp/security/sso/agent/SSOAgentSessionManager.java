@@ -1,20 +1,25 @@
-package org.wso2.appserver.webapp.mgt.identity.sso.agent;
+package org.wso2.appserver.webapp.security.sso.agent;
 
-import org.wso2.appserver.webapp.mgt.identity.sso.agent.model.LoggedInSessionBean;
+import org.wso2.appserver.webapp.security.sso.SSOConstants;
+import org.wso2.appserver.webapp.security.sso.model.LoggedInSessionBean;
 
 import javax.servlet.http.HttpSession;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 public class SSOAgentSessionManager {
-
-    /*
-     * Session Index at the IdP is mapped to the session at the SP so that a single logout request
-     * can be handled by invalidating the SP session mapped to IdP Session Index.
+    /**
+     * Session Index at the identity provider is mapped to the session at the service provider so that a single-logout
+     * request (SLO) can be handled by invalidating the service provider session mapped to identity provider session
+     * index.
      */
     private static Map<String, Set<HttpSession>> ssoSessionsMap = new HashMap<>();
 
     /**
-     * Prevents initiating the SSOAgentSessionManager class
+     * Prevents initiating the SSOAgentSessionManager class.
      */
     private SSOAgentSessionManager() {
     }
@@ -23,11 +28,10 @@ public class SSOAgentSessionManager {
         return ssoSessionsMap;
     }
 
-
     //  TODO: JAVADOC COMMENTS
     public static Set<HttpSession> invalidateAllSessions(HttpSession session) {
         LoggedInSessionBean sessionBean = (LoggedInSessionBean) session.
-                getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
+                getAttribute(SSOConstants.SESSION_BEAN_NAME);
         Set<HttpSession> sessions = new HashSet<>();
         if ((Optional.ofNullable(sessionBean).isPresent()) && (Optional.ofNullable(sessionBean.getSAML2SSO()).
                 isPresent())) {
@@ -59,8 +63,8 @@ public class SSOAgentSessionManager {
      * @param session the authenticated session to be added to the session map
      */
     public static void addAuthenticatedSession(HttpSession session) {
-        Optional<String> sessionIndex = Optional.ofNullable(
-                ((LoggedInSessionBean) session.getAttribute(SSOAgentConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+        Optional<String> sessionIndex = Optional.
+                ofNullable(((LoggedInSessionBean) session.getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                         getSessionIndex());
 
         if (Optional.ofNullable(getSSOSessionsMap().get(sessionIndex.get())).isPresent()) {
@@ -71,5 +75,4 @@ public class SSOAgentSessionManager {
             getSSOSessionsMap().put(sessionIndex.get(), sessions);
         }
     }
-
 }
