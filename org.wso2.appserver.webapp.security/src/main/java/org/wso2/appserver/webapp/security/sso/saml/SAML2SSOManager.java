@@ -105,11 +105,11 @@ public class SAML2SSOManager {
         } else {
             LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
                     getAttribute(SSOConstants.SESSION_BEAN_NAME);
-            if (sessionBean != null) {
+            if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
                         sessionBean.getSAML2SSO().getSessionIndex());
             } else {
-                throw new SSOException("SLO Request can not be built. SSO Session is NULL");
+                throw new SSOException("SLO Request can not be built. SSO Session is null.");
             }
         }
 
@@ -152,12 +152,10 @@ public class SAML2SSOManager {
         return idpUrl;
     }
 
-
-
     /**
      * Handles the request for HTTP POST binding.
      *
-     * @param request  the HTTP Servlet request with SAML 2.0 message
+     * @param request  the HTTP servlet request with SAML 2.0 message
      * @param isLogout true if request is a logout request, else false
      * @return the HTML payload to be transmitted
      * @throws SSOException if SSO session is null
@@ -179,7 +177,8 @@ public class SAML2SSOManager {
 
                 //  TODO: LOGOUT REQUEST SIGNATURE
             } else {
-                throw new SSOException("SLO Request can not be built. SSO Session is null");
+                throw new SSOException("Single-logout (SLO) Request cannot be built. " +
+                        "Single-sign-on (SSO) Session is null.");
             }
         }
 
@@ -201,11 +200,12 @@ public class SAML2SSOManager {
         }
 
         StringBuilder htmlParameters = new StringBuilder();
-        parameters.entrySet().stream().filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
-                ofNullable(entry.getValue()).isPresent()) && (entry.getValue().length > 0))).
-                forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).forEach(
-                        parameter -> htmlParameters.append("<input type='hidden' name='").append(filteredEntry.getKey())
-                                .append("' value='").append(parameter).append("'>\n")));
+        parameters.entrySet().stream().
+                filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) &&
+                        (Optional.ofNullable(entry.getValue()).isPresent()) && (entry.getValue().length > 0))).
+                forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
+                        forEach(parameter -> htmlParameters.append("<input type='hidden' name='").
+                                append(filteredEntry.getKey()).append("' value='").append(parameter).append("'>\n")));
 
         String htmlPayload = getSSOAgentConfig().getSAML2().getPostBindingRequestHTMLPayload();
         if ((!Optional.ofNullable(htmlPayload).isPresent()) || (!htmlPayload.contains("<!--$saml_params-->"))) {
@@ -228,6 +228,73 @@ public class SAML2SSOManager {
             htmlPayload = htmlPayload.replace("<!--$saml_params-->", htmlParameters.toString());
         }
         return htmlPayload;
+    }
+
+    /**
+     * Returns a SAML 2.0 Authentication Request (AuthnRequest) instance based on the HTTP servlet request.
+     *
+     * @param request the HTTP servlet request used to build up the Authentication Request
+     * @return a SAML 2.0 Authentication Request (AuthnRequest) instance
+     */
+    private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
+        //  Issuer identifies the entity that generated the request message
+        Issuer issuer = new IssuerBuilder().buildObject();
+        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
+
+        //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
+        NameIDPolicy nameIdPolicy = new NameIDPolicyBuilder().buildObject();
+        //  URI reference corresponding to a name identifier format
+        nameIdPolicy.setFormat("urn:oasis:names:tc:SAML:2.0:nameid-format:persistent");
+        //  Unique identifier of the service provider or affiliation of providers for whom the identifier was generated
+        nameIdPolicy.setSPNameQualifier("Issuer");
+        //  Identity provider is allowed, in the course of fulfilling the request to generate a new identifier to
+        //  represent the principal
+        nameIdPolicy.setAllowCreate(true);
+
+        //  This represents a URI reference identifying an authentication context class that describes the
+        //  authentication context declaration that follows
+        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
+        authnContextClassRef.
+                setAuthnContextClassRef("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
+
+        //  Specifies the authentication context requirements of authentication statements returned in response
+        //  to a request or query
+        RequestedAuthnContext requestedAuthnContext = new RequestedAuthnContextBuilder().buildObject();
+        //  Resulting authentication context in the authentication statement must be the exact match of the
+        //  authentication context specified
+        requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.EXACT);
+        requestedAuthnContext.getAuthnContextClassRefs().add(authnContextClassRef);
+
+        DateTime issueInstant = new DateTime();
+
+        //  Create an AuthnRequest instance
+        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+
+        authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
+        authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
+        authRequest.setIssueInstant(issueInstant);
+        authRequest.setProtocolBinding(getSSOAgentConfig().getSAML2().getHttpBinding());
+        authRequest.setAssertionConsumerServiceURL(getSSOAgentConfig().getSAML2().getACSURL());
+        authRequest.setIssuer(issuer);
+        authRequest.setNameIDPolicy(nameIdPolicy);
+        authRequest.setRequestedAuthnContext(requestedAuthnContext);
+        authRequest.setID(SSOUtils.createID());
+        authRequest.setVersion(SAMLVersion.VERSION_20);
+        authRequest.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
+
+        //  If any optional protocol message extension elements that are agreed on between the communicating parties
+        if (Optional.ofNullable(request.getAttribute(Extensions.LOCAL_NAME)).isPresent()) {
+            authRequest.setExtensions((Extensions) request.getAttribute(Extensions.LOCAL_NAME));
+        }
+
+        //  Requesting SAML Attributes which the requester desires to be supplied by the identity provider,
+        //  this Index value is registered in the identity provider
+        String index = getSSOAgentConfig().getSAML2().getAttributeConsumingServiceIndex();
+        if ((Optional.ofNullable(index).isPresent()) && !(index.trim().isEmpty())) {
+            authRequest.setAttributeConsumingServiceIndex(Integer.parseInt(index));
+        }
+
+        return authRequest;
     }
 
     /**
@@ -325,7 +392,7 @@ public class SAML2SSOManager {
         //  Validate signature
 //        validateSignature(saml2Response, assertion);
 
-        // Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
+        //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(SSOUtils.marshall(assertion.get()));
 
         ((LoggedInSessionBean) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
@@ -334,7 +401,7 @@ public class SAML2SSOManager {
         //  For removing the session when the single-logout request made by the service provider itself
         if (getSSOAgentConfig().getSAML2().isSLOEnabled()) {
             Optional<String> sessionId = Optional.
-                    ofNullable(assertion.get().getAuthnStatements().get(0).getSessionIndex());
+                    ofNullable(assertion.get().getAuthnStatements().stream().findFirst().get().getSessionIndex());
             if (!sessionId.isPresent()) {
                 throw new SSOException("Single Logout is enabled but IdP Session ID not found in SAML2 Assertion");
             }
@@ -344,81 +411,6 @@ public class SAML2SSOManager {
         }
 
         request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
-    }
-
-    /**
-     * Returns a SAML 2.0 Authentication Request (AuthnRequest) instance based on the HTTP servlet request.
-     *
-     * @param request the HTTP servlet request used to build up the Authentication Request
-     * @return a SAML 2.0 Authentication Request (AuthnRequest) instance
-     */
-    private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
-        //  Issuer identifies the entity that generated the request message
-
-//        Issuer issuer = new IssuerBuilder().buildObject();
-        Issuer issuer = new IssuerBuilder().buildObject("urn:oasis:names:tc:SAML:2.0:assertion", "Issuer", "samlp");
-        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
-
-        //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
-        NameIDPolicy nameIdPolicy = new NameIDPolicyBuilder().buildObject();
-        //  URI reference corresponding to a name identifier format
-        nameIdPolicy.setFormat("urn:oasis:names:tc:SAML:2.0:nameid-format:persistent");
-        //  Unique identifier of the service provider or affiliation of providers for whom the identifier was generated
-        nameIdPolicy.setSPNameQualifier("Issuer");
-        //  Identity provider is allowed, in the course of fulfilling the request to generate a new identifier to
-        //  represent the principal
-        nameIdPolicy.setAllowCreate(true);
-
-        //  This represents a URI reference identifying an authentication context class that describes the
-        //  authentication context declaration that follows
-
-//        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().buildObject();
-        AuthnContextClassRef authnContextClassRef = new AuthnContextClassRefBuilder().
-                buildObject("urn:oasis:names:tc:SAML:2.0:assertion", "AuthnContextClassRef", "saml");
-        authnContextClassRef.
-                setAuthnContextClassRef("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
-
-        //  Specifies the authentication context requirements of authentication statements returned in response
-        //  to a request or query
-        RequestedAuthnContext requestedAuthnContext = new RequestedAuthnContextBuilder().buildObject();
-        //  Resulting authentication context in the authentication statement must be the exact match of the
-        //  authentication context specified
-        requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.EXACT);
-        requestedAuthnContext.getAuthnContextClassRefs().add(authnContextClassRef);
-
-        DateTime issueInstant = new DateTime();
-
-        //  Create an AuthnRequest instance
-
-//        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
-        AuthnRequest authRequest = new AuthnRequestBuilder().
-                buildObject("urn:oasis:names:tc:SAML:2.0:protocol", "AuthnRequest", "samlp");
-
-        authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
-        authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
-        authRequest.setIssueInstant(issueInstant);
-        authRequest.setProtocolBinding(getSSOAgentConfig().getSAML2().getHttpBinding());
-        authRequest.setAssertionConsumerServiceURL(getSSOAgentConfig().getSAML2().getACSURL());
-        authRequest.setIssuer(issuer);
-        authRequest.setNameIDPolicy(nameIdPolicy);
-        authRequest.setRequestedAuthnContext(requestedAuthnContext);
-        authRequest.setID(SSOUtils.createID());
-        authRequest.setVersion(SAMLVersion.VERSION_20);
-        authRequest.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
-
-        //  If any optional protocol message extension elements that are agreed on between the communicating parties
-        if (Optional.ofNullable(request.getAttribute(Extensions.LOCAL_NAME)).isPresent()) {
-            authRequest.setExtensions((Extensions) request.getAttribute(Extensions.LOCAL_NAME));
-        }
-
-        //  Requesting SAML Attributes which the requester desires to be supplied by the identity provider,
-        //  this Index value is registered in the identity provider
-        String index = getSSOAgentConfig().getSAML2().getAttributeConsumingServiceIndex();
-        if ((Optional.ofNullable(index).isPresent()) && !(index.trim().isEmpty())) {
-            authRequest.setAttributeConsumingServiceIndex(Integer.parseInt(index));
-        }
-
-        return authRequest;
     }
 
     /**
@@ -465,34 +457,43 @@ public class SAML2SSOManager {
         }
     }
 
-    protected LogoutRequest buildLogoutRequest(String user, String sessionIdx) throws SSOException {
+    /**
+     * Returns a SAML 2.0 Logout Request (LogoutRequest) instance.
+     *
+     * @param user         the identifier that specify the principal as currently recognized by the identity and
+     *                     service providers
+     * @param sessionIndex the identifier that indexes this session at the message recipient
+     * @return a SAML 2.0 Logout Request (LogoutRequest) instance
+     */
+    private LogoutRequest buildLogoutRequest(String user, String sessionIndex) {
+        //  Creates a Logout Request instance
+        LogoutRequest logoutRequest = new LogoutRequestBuilder().buildObject();
 
-        LogoutRequest logoutReq = new LogoutRequestBuilder().buildObject();
-
-        logoutReq.setID(SSOUtils.createID());
-        logoutReq.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
+        logoutRequest.setID(SSOUtils.createID());
+        logoutRequest.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
 
         DateTime issueInstant = new DateTime();
-        logoutReq.setIssueInstant(issueInstant);
-        logoutReq.setNotOnOrAfter(new DateTime(issueInstant.getMillis() + 5 * 60 * 1000));
+        logoutRequest.setIssueInstant(issueInstant);
+        //  Time at which the request expires, after which the recipient may discard the message
+        logoutRequest.setNotOnOrAfter(new DateTime(issueInstant.getMillis() + (5 * 60 * 1000)));
 
-        IssuerBuilder issuerBuilder = new IssuerBuilder();
-        Issuer issuer = issuerBuilder.buildObject();
+        Issuer issuer = new IssuerBuilder().buildObject();
         issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
-        logoutReq.setIssuer(issuer);
+        logoutRequest.setIssuer(issuer);
 
         NameID nameId = new NameIDBuilder().buildObject();
         nameId.setFormat("urn:oasis:names:tc:SAML:2.0:nameid-format:entity");
         nameId.setValue(user);
-        logoutReq.setNameID(nameId);
+        logoutRequest.setNameID(nameId);
 
-        SessionIndex sessionIndex = new SessionIndexBuilder().buildObject();
-        sessionIndex.setSessionIndex(sessionIdx);
-        logoutReq.getSessionIndexes().add(sessionIndex);
+        SessionIndex sessionIndexElement = new SessionIndexBuilder().buildObject();
+        sessionIndexElement.setSessionIndex(sessionIndex);
+        logoutRequest.getSessionIndexes().add(sessionIndexElement);
 
-        logoutReq.setReason("Single Logout");
+        //  Indicates the reason for the logout
+        logoutRequest.setReason("Single Logout");
 
-        return logoutReq;
+        return logoutRequest;
     }
 
     /**
