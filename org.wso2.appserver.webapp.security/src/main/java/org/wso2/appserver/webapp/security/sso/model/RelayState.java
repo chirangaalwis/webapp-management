@@ -15,6 +15,7 @@
  */
 package org.wso2.appserver.webapp.security.sso.model;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -22,7 +23,9 @@ import java.util.Map;
  *
  * @since 6.0.0
  */
-public class RelayState {
+public class RelayState implements Serializable {
+    private static final long serialVersionUID = 7853678462461888093L;
+
     private String requestedURL;
     private String requestQueryString;
     private Map requestParameters;

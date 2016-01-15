@@ -57,6 +57,17 @@ public class SSOConstants {
         private SSOAgentConfiguration() {
         }
 
+        public static class KeyStoreConfiguration {
+            public static final String KEYSTORE_PATH = "Keystore.Path";
+            public static final String KEYSTORE_PASSWORD = "Keystore.Path";
+
+            /**
+             * Prevents instantiating the KeyStoreConfiguration nested class.
+             */
+            private KeyStoreConfiguration() {
+            }
+        }
+
         /**
          * This class defines the SAML 2.0 specific single-sign-on (SSO) configuration property name constants.
          */
@@ -117,8 +128,9 @@ public class SSOConstants {
         //  Context parameter property name constant
         public static final String ENABLE_SAML2_SSO = "enable.saml2.sso";
         //  File path related constants
-        public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
         public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
+        public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
+        public static final String KEYSTORE_SETTINGS_FILE_NAME = "keystore.properties";
         //  HTTP servlet request session notes' property name and attribute name constants
         public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";

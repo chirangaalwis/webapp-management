@@ -34,7 +34,7 @@ import javax.xml.bind.annotation.XmlAttribute;
  * @since 6.0.0
  */
 public class LoggedInSessionBean implements Serializable {
-    private static final long serialVersionUID = 7762835859870143767L;
+    private static final long serialVersionUID = 1639369078633501892L;
     private static final String emptyString = "";
 
     private SAML2SSO saml2SSO;
@@ -51,6 +51,8 @@ public class LoggedInSessionBean implements Serializable {
      * A nested static class which represents an access token.
      */
     public static class AccessTokenResponseBean implements Serializable {
+        private static final long serialVersionUID = -3976452423669184620L;
+
         @XmlAttribute(name = "access_token")
         @SerializedName("access_token")
         private String accessToken;
@@ -127,6 +129,8 @@ public class LoggedInSessionBean implements Serializable {
      * in a user logged-in session.
      */
     public static class SAML2SSO implements Serializable {
+        private static final long serialVersionUID = -2832436047480647011L;
+
         private String subjectId;
         private Response response;
         private String responseString;

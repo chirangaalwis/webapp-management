@@ -18,13 +18,18 @@ package org.wso2.appserver.webapp.security.sso.agent;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.model.LoggedInSessionBean;
 
-import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import javax.servlet.http.HttpSession;
 
+/**
+ * A class which manages authenticated sessions of a service provider.
+ *
+ * @since 6.0.0
+ */
 public class SSOAgentSessionManager {
     /**
      * Session Index at the identity provider is mapped to the session at the service provider so that a single-logout

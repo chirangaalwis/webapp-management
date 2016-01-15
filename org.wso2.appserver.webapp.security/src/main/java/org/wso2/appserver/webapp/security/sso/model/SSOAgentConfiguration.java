@@ -20,6 +20,12 @@ import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,6 +61,10 @@ public class SSOAgentConfiguration {
 
     private SAML2 saml2;
     private OAuth2 oauth2;
+
+    private InputStream keyStoreStream;
+    private String keyStorePassword;
+    private KeyStore keyStore;
 
     //  An instance field initialization block
     {
@@ -130,6 +140,33 @@ public class SSOAgentConfiguration {
 
     private void setOAuth2(OAuth2 oauth2) {
         this.oauth2 = oauth2;
+    }
+
+    public KeyStore getKeyStore() throws SSOException {
+        if (!Optional.ofNullable(keyStore).isPresent()) {
+            setKeyStore(readKeyStore(getKeyStoreStream(), getKeyStorePassword()));
+        }
+        return keyStore;
+    }
+
+    public void setKeyStore(KeyStore keyStore) {
+        this.keyStore = keyStore;
+    }
+
+    private String getKeyStorePassword() {
+        return keyStorePassword;
+    }
+
+    public void setKeyStorePassword(String keyStorePassword) {
+        this.keyStorePassword = keyStorePassword;
+    }
+
+    private InputStream getKeyStoreStream() {
+        return keyStoreStream;
+    }
+
+    public void setKeyStoreStream(InputStream keyStoreStream) {
+        this.keyStoreStream = keyStoreStream;
     }
 
     /**
@@ -399,6 +436,28 @@ public class SSOAgentConfiguration {
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() &&
                 (!Optional.ofNullable(getOAuth2().getClientSecret()).isPresent())) {
             throw new SSOException("OAuth2 Client Secret not configured");
+        }
+    }
+
+    /**
+     * Returns a {@code KeyStore} from the specified {@code InputStream} using the keystore password.
+     *
+     * @param inputStream   the key store file {@link InputStream}
+     * @param storePassword the password to the keystore
+     * @return a {@link KeyStore} instance
+     * @throws SSOException if an error occurs while loading the key store or if the {@code storePassword} is null
+     */
+    private KeyStore readKeyStore(InputStream inputStream, String storePassword) throws SSOException {
+        if (!Optional.ofNullable(storePassword).isPresent()) {
+            throw new SSOException("KeyStore password can not be null.");
+        }
+        try (InputStream keystoreInputStream = inputStream) {
+            String keyStoreType = "JKS";
+            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+            keyStore.load(keystoreInputStream, storePassword.toCharArray());
+            return keyStore;
+        } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+            throw new SSOException("Error while loading key store.", e);
         }
     }
 
