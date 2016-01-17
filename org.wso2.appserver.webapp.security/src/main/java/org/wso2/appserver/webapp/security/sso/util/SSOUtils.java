@@ -59,8 +59,6 @@ import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentDataHolder;
-import org.wso2.appserver.webapp.security.sso.saml.KeyStoreConfiguration;
-import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
 import org.wso2.appserver.webapp.security.sso.saml.X509CredentialImpl;
 import org.xml.sax.SAXException;
 
@@ -75,7 +73,11 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -153,6 +155,36 @@ public class SSOUtils {
     }
 
     /**
+     * Loads the property content defined in sso-sp-config.properties file to the specified {@code Properties} data
+     * structure.
+     * </p>
+     * This is a utility method used during the initialization of this class instance.
+     *
+     * @param properties the {@link Properties} structure to which the file content is to be loaded.
+     * @throws SSOException if an error occurs during the loading of the file content or if the sso-sp-config.properties
+     *                      file cannot be found
+     */
+    public static void loadSSOConfigurationProperties(Properties properties) throws SSOException {
+        Path ssoSPConfigFilePath = Paths.
+                get(SSOUtils.getCatalinaConfigurationHome().toString(),
+                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
+
+        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
+        if (Files.exists(ssoSPConfigFilePath)) {
+            try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
+                properties.load(fileInputStream);
+                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
+                        "data from sso-sp-config.properties file.");
+            } catch (IOException e) {
+                throw new SSOException("Error when loading global single-sign-on configuration data " +
+                        "from sso-sp-config.properties file.");
+            }
+        } else {
+            throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
+        }
+    }
+
+    /**
      * Generates a unique id for authentication requests.
      *
      * @return a unique id for authentication requests
@@ -189,64 +221,40 @@ public class SSOUtils {
     }
 
     /**
-     * Generates a {@code SSOAgentX509Credential} instance based on keystore configurations specified.
-     *
-     * @return a {@link SSOAgentX509Credential} instance
-     * @throws SSOException if an error occurs while reading the keystore.properties file
-     */
-    public static Optional generateSSOAgentX509Credential() throws SSOException {
-        Path keystoreConfigurationFilePath = Paths.get(SSOUtils.getCatalinaConfigurationHome().toString(),
-                SSOConstants.SAMLSSOValveConstants.KEYSTORE_SETTINGS_FILE_NAME);
-        if (Files.exists(keystoreConfigurationFilePath)) {
-            try (InputStream inputStream = Files.newInputStream(keystoreConfigurationFilePath)) {
-                Properties properties = new Properties();
-                properties.load(inputStream);
-                return Optional.of(new SSOAgentX509Credential(properties));
-            } catch (IOException e) {
-                throw new SSOException("Error when reading the keystore.properties file.", e);
-            }
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Prepares a {@code KeyStoreConfiguration} instance based on keystore properties specified.
+     * Returns a {@code KeyStore} based on keystore properties specified.
      *
      * @param keyStoreConfigurationProperties the keystore properties
-     * @return the {@link KeyStoreConfiguration} instance
-     * @throws SSOException if an error occurs while generating the {@link KeyStoreConfiguration} instance
+     * @return the {@link KeyStore} instance
+     * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
      */
-    public static Optional generateKeyStoreConfiguration(Properties keyStoreConfigurationProperties)
-            throws SSOException {
-        if (Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
-            Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
-                    getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH));
-            if (keyStorePathString.isPresent()) {
-                Path keyStorePath = Paths.get(keyStorePathString.get());
-                if (Files.exists(keyStorePath)) {
-                    KeyStoreConfiguration keyStoreConfiguration = new KeyStoreConfiguration();
-
-                    try {
-                        keyStoreConfiguration.setKeyStoreStream(Files.newInputStream(keyStorePath));
-                    } catch (IOException e) {
-                        throw new SSOException("Error when reading the keystore.", e);
-                    }
-
-                    Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
-                            getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.
-                                    KEYSTORE_PASSWORD));
-                    if (keystorePasswordString.isPresent()) {
-                        keyStoreConfiguration.setKeyStorePassword(keystorePasswordString.get());
-                        return Optional.of(keyStoreConfiguration);
-                    }
-                } else {
-                    throw new SSOException("File path specified under " +
-                            SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH +
-                            " does not exist.");
-                }
-            }
+    public static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
+        if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
+            return Optional.empty();
         }
-        return Optional.empty();
+
+        Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH));
+        Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PASSWORD));
+
+        if (!keystorePasswordString.isPresent() || !keyStorePathString.isPresent()) {
+            return Optional.empty();
+        }
+
+        Path keyStorePath = Paths.get(keyStorePathString.get());
+        if (Files.exists(keyStorePath)) {
+            try (InputStream keystoreInputStream = Files.newInputStream(keyStorePath)) {
+                String keyStoreType = "JKS";
+                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+                keyStore.load(keystoreInputStream, keystorePasswordString.get().toCharArray());
+                return Optional.of(keyStore);
+            } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+                throw new SSOException("Error while loading key store.", e);
+            }
+        } else {
+            throw new SSOException("File path specified under " +
+                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
+        }
     }
 
     /**
@@ -456,10 +464,10 @@ public class SSOUtils {
     }
 
     public static AuthnRequest setSignature(AuthnRequest authnRequest, String signatureAlgorithm,
-            X509Credential cred) throws SSOException {
+            X509Credential credentials) throws SSOException {
         doBootstrap();
         try {
-            Signature signature = setSignatureRaw(signatureAlgorithm, cred);
+            Signature signature = setSignatureRaw(signatureAlgorithm, credentials);
 
 
             authnRequest.setSignature(signature);

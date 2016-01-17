@@ -56,7 +56,7 @@ public class SAMLSSOValve extends SingleSignOn {
 
     public SAMLSSOValve() throws SSOException {
         getLogger().log(Level.INFO, "Initializing SAMLSSOValve...");
-        loadSSOConfigurationProperties(getSSOSPConfigProperties());
+        SSOUtils.loadSSOConfigurationProperties(getSSOSPConfigProperties());
     }
 
     private static Logger getLogger() {
@@ -103,9 +103,8 @@ public class SAMLSSOValve extends SingleSignOn {
                 ssoAgentConfiguration = new SSOAgentConfiguration();
                 ssoAgentConfiguration.initConfig(getSSOSPConfigProperties());
 
-                Optional.ofNullable(SSOUtils.generateSSOAgentX509Credential()).
-                        ifPresent(ssoAgentX509Credential -> ssoAgentConfiguration.getSAML2().
-                                setSSOAgentX509Credential((SSOAgentX509Credential) ssoAgentX509Credential.get()));
+                ssoAgentConfiguration.getSAML2().
+                        setSSOAgentX509Credential(new SSOAgentX509Credential(getSSOSPConfigProperties()));
                 Optional.of(SSOUtils.generateIssuerID(request.getContextPath())).
                         ifPresent(id -> ssoAgentConfiguration.getSAML2().setSPEntityId((String) id.get()));
                 Optional.of(SSOUtils.generateConsumerUrl(request.getContextPath(), getSSOSPConfigProperties())).
@@ -279,35 +278,5 @@ public class SAMLSSOValve extends SingleSignOn {
         getLogger().log(Level.FINE, "Redirect path = " + redirectPath);
 
         return redirectPath.get();
-    }
-
-    /**
-     * Loads the property content defined in sso-sp-config.properties file to the specified {@code Properties} data
-     * structure.
-     * </p>
-     * This is a utility method used during the initialization of this class instance.
-     *
-     * @param properties the {@link Properties} structure to which the file content is to be loaded.
-     * @throws SSOException if an error occurs during the loading of the file content or if the sso-sp-config.properties
-     *                      file cannot be found
-     */
-    private static void loadSSOConfigurationProperties(Properties properties) throws SSOException {
-        Path ssoSPConfigFilePath = Paths.
-                get(SSOUtils.getCatalinaConfigurationHome().toString(),
-                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
-
-        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
-        if (Files.exists(ssoSPConfigFilePath)) {
-            try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
-                properties.load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
-                        "data from sso-sp-config.properties file.");
-            } catch (IOException e) {
-                throw new SSOException("Error when loading global single-sign-on configuration data " +
-                        "from sso-sp-config.properties file.");
-            }
-        } else {
-            throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
-        }
     }
 }

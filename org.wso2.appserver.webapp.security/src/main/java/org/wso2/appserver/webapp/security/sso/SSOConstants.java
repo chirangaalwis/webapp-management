@@ -57,20 +57,6 @@ public class SSOConstants {
         private SSOAgentConfiguration() {
         }
 
-        public static class KeyStoreConfiguration {
-            public static final String KEYSTORE_PATH = "Keystore.Path";
-            public static final String KEYSTORE_PASSWORD = "Keystore.Password";
-
-            public static final String SSL_CERTIFICATE_ALIAS = "wso2carbon";
-            public static final String SSL_CERTIFICATE_PRIVATE_KEY_PASSWORD = "wso2carbon";
-
-            /**
-             * Prevents instantiating the KeyStoreConfiguration nested class.
-             */
-            private KeyStoreConfiguration() {
-            }
-        }
-
         /**
          * This class defines the SAML 2.0 specific single-sign-on (SSO) configuration property name constants.
          */
@@ -94,6 +80,13 @@ public class SSOConstants {
             public static final String IS_FORCE_AUTHN = "SAML2.IsForceAuthn";
             public static final String RELAY_STATE = "SAML2.RelayState";
             public static final String POST_BINDING_REQUEST_HTML_PAYLOAD = "SAML2.PostBindingRequestHTMLPayload";
+
+            //  Digital signature configuration properties
+            public static final String KEYSTORE_PATH = "SAML.KeyStorePath";
+            public static final String KEYSTORE_PASSWORD = "SAML.KeyStorePassword";
+            public static final String IDP_PUBLIC_CERTIFICATE_ALIAS = "SAML.IdPCertAlias";
+            public static final String SP_PRIVATE_KEY_ALIAS = "SAML.PrivateKeyAlias";
+            public static final String SP_PRIVATE_KEY_PASSWORD = "SAML.PrivateKeyAlias";
             public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
 
             /**
@@ -133,7 +126,6 @@ public class SSOConstants {
         //  File path related constants
         public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
         public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
-        public static final String KEYSTORE_SETTINGS_FILE_NAME = "keystore.properties";
         //  HTTP servlet request session notes' property name and attribute name constants
         public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";

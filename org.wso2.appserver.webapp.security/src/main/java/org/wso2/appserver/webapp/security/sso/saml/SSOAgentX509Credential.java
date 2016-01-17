@@ -68,28 +68,29 @@ public class SSOAgentX509Credential {
     }
 
     /**
-     * Reads the appropriate X.509 certificate credentials for the 'wso2carbon' certificate based on keystore
-     * configuration details.
+     * Reads the appropriate X.509 certificate credentials using the keystore configuration properties specified in
+     * sso-sp-config.properties.
      *
      * @param keyStoreConfigurationProperties the keystore configuration properties
      * @throws SSOException if an error occurred while reading credentials
      */
     private void readX509Credentials(Properties keyStoreConfigurationProperties) throws SSOException {
-        Optional configuration = SSOUtils.generateKeyStoreConfiguration(keyStoreConfigurationProperties);
+        Optional generatedKeyStore = SSOUtils.generateKeyStore(keyStoreConfigurationProperties);
 
-        if (configuration.isPresent()) {
-            KeyStore keyStore = ((KeyStoreConfiguration) configuration.get()).getKeyStore();
-            String alias = SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.SSL_CERTIFICATE_ALIAS;
+        if (generatedKeyStore.isPresent()) {
+            KeyStore keyStore = (KeyStore) generatedKeyStore.get();
+            String certificateAlias = SSOConstants.SSOAgentConfiguration.SAML2.IDP_PUBLIC_CERTIFICATE_ALIAS;
             try {
-                setEntityCertificate((X509Certificate) keyStore.getCertificate(alias));
+                setEntityCertificate((X509Certificate) keyStore.getCertificate(certificateAlias));
             } catch (KeyStoreException e) {
-                throw new SSOException("Error occurred while retrieving public certificate with alias " + alias + ".");
+                throw new SSOException(
+                        "Error occurred while retrieving public certificate with certificateAlias " + certificateAlias);
             }
 
+            String privateKeyAlias = SSOConstants.SSOAgentConfiguration.SAML2.SP_PRIVATE_KEY_ALIAS;
             try {
-                setPrivateKey((PrivateKey) keyStore.getKey(alias,
-                        SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.SSL_CERTIFICATE_PRIVATE_KEY_PASSWORD.
-                                toCharArray()));
+                setPrivateKey((PrivateKey) keyStore.getKey(privateKeyAlias,
+                        SSOConstants.SSOAgentConfiguration.SAML2.SP_PRIVATE_KEY_PASSWORD.toCharArray()));
             } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
                 throw new SSOException("Error occurred while retrieving the private key.");
             }
