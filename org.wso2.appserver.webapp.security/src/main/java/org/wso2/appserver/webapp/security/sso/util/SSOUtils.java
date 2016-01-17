@@ -15,20 +15,40 @@
  */
 package org.wso2.appserver.webapp.security.sso.util;
 
+import org.apache.xml.security.c14n.Canonicalizer;
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.core.AuthnRequest;
+import org.opensaml.saml2.core.EncryptedAssertion;
+import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.RequestAbstractType;
+import org.opensaml.saml2.core.Response;
+import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.XMLObjectBuilder;
+import org.opensaml.xml.encryption.EncryptedKey;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
 import org.opensaml.xml.io.UnmarshallingException;
+import org.opensaml.xml.security.SecurityHelper;
+import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
+import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
+import org.opensaml.xml.security.x509.X509Credential;
+import org.opensaml.xml.signature.KeyInfo;
+import org.opensaml.xml.signature.Signature;
+import org.opensaml.xml.signature.Signer;
+import org.opensaml.xml.signature.SignatureValidator;
+import org.opensaml.xml.signature.X509Data;
 import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
+import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
@@ -37,17 +57,27 @@ import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentDataHolder;
+import org.wso2.appserver.webapp.security.sso.saml.KeyStoreConfiguration;
+import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
+import org.wso2.appserver.webapp.security.sso.saml.X509CredentialImpl;
 import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.CertificateEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
@@ -57,7 +87,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
+import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -115,7 +147,7 @@ public class SSOUtils {
      * @return a {@link Path} instance representing the Apache Tomcat configuration home CATALINA_BASE/conf
      * @throws SSOException if CATALINA_BASE environmental variable has not been set
      */
-    public static Path getTomcatConfigurationHome() throws SSOException {
+    public static Path getCatalinaConfigurationHome() throws SSOException {
         return Paths.
                 get(getCatalinaBase().toString(), SSOConstants.SAMLSSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
     }
@@ -154,6 +186,67 @@ public class SSOUtils {
         Stream<Character> characterStream = stringValue.chars().
                 mapToObj(intCharacter -> (char) intCharacter).parallel().filter(Character::isWhitespace);
         return characterStream.count() == stringValue.length();
+    }
+
+    /**
+     * Generates a {@code SSOAgentX509Credential} instance based on keystore configurations specified.
+     *
+     * @return a {@link SSOAgentX509Credential} instance
+     * @throws SSOException if an error occurs while reading the keystore.properties file
+     */
+    public static Optional generateSSOAgentX509Credential() throws SSOException {
+        Path keystoreConfigurationFilePath = Paths.get(SSOUtils.getCatalinaConfigurationHome().toString(),
+                SSOConstants.SAMLSSOValveConstants.KEYSTORE_SETTINGS_FILE_NAME);
+        if (Files.exists(keystoreConfigurationFilePath)) {
+            try (InputStream inputStream = Files.newInputStream(keystoreConfigurationFilePath)) {
+                Properties properties = new Properties();
+                properties.load(inputStream);
+                return Optional.of(new SSOAgentX509Credential(properties));
+            } catch (IOException e) {
+                throw new SSOException("Error when reading the keystore.properties file.", e);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Prepares a {@code KeyStoreConfiguration} instance based on keystore properties specified.
+     *
+     * @param keyStoreConfigurationProperties the keystore properties
+     * @return the {@link KeyStoreConfiguration} instance
+     * @throws SSOException if an error occurs while generating the {@link KeyStoreConfiguration} instance
+     */
+    public static Optional generateKeyStoreConfiguration(Properties keyStoreConfigurationProperties)
+            throws SSOException {
+        if (Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
+            Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
+                    getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH));
+            if (keyStorePathString.isPresent()) {
+                Path keyStorePath = Paths.get(keyStorePathString.get());
+                if (Files.exists(keyStorePath)) {
+                    KeyStoreConfiguration keyStoreConfiguration = new KeyStoreConfiguration();
+
+                    try {
+                        keyStoreConfiguration.setKeyStoreStream(Files.newInputStream(keyStorePath));
+                    } catch (IOException e) {
+                        throw new SSOException("Error when reading the keystore.", e);
+                    }
+
+                    Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
+                            getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.
+                                    KEYSTORE_PASSWORD));
+                    if (keystorePasswordString.isPresent()) {
+                        keyStoreConfiguration.setKeyStorePassword(keystorePasswordString.get());
+                        return Optional.of(keyStoreConfiguration);
+                    }
+                } else {
+                    throw new SSOException("File path specified under " +
+                            SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH +
+                            " does not exist.");
+                }
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -334,6 +427,162 @@ public class SSOUtils {
             return unmarshaller.unmarshall(element);
         } catch (ParserConfigurationException | UnmarshallingException | SAXException | IOException e) {
             throw new SSOException("Error in unmarshalling the XML string representation.", e);
+        }
+    }
+
+
+    // TODO: TO BE REFACTORED, COMMENTS
+
+
+    public static Assertion getDecryptedAssertion(SSOAgentConfiguration ssoAgentConfiguration, EncryptedAssertion encryptedAssertion) throws SSOException {
+
+        try {
+            KeyInfoCredentialResolver keyResolver = new StaticKeyInfoCredentialResolver(
+                    new X509CredentialImpl(ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
+
+            EncryptedKey key = encryptedAssertion.getEncryptedData().
+                    getKeyInfo().getEncryptedKeys().get(0);
+            Decrypter decrypter = new Decrypter(null, keyResolver, null);
+            SecretKey dkey = (SecretKey) decrypter.decryptKey(key, encryptedAssertion.getEncryptedData().
+                    getEncryptionMethod().getAlgorithm());
+            Credential shared = SecurityHelper.getSimpleCredential(dkey);
+            decrypter = new Decrypter(new StaticKeyInfoCredentialResolver(shared), null, null);
+            decrypter.setRootInNewDocument(true);
+            return decrypter.decrypt(encryptedAssertion);
+        } catch (Exception e) {
+            throw new SSOException("Decrypted assertion error", e);
+
+        }
+    }
+
+    public static AuthnRequest setSignature(AuthnRequest authnRequest, String signatureAlgorithm,
+            X509Credential cred) throws SSOException {
+        doBootstrap();
+        try {
+            Signature signature = setSignatureRaw(signatureAlgorithm, cred);
+
+
+            authnRequest.setSignature(signature);
+
+            List<Signature> signatureList = new ArrayList<>();
+            signatureList.add(signature);
+
+            // Marshall and Sign
+            MarshallerFactory marshallerFactory =
+                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            Marshaller marshaller = marshallerFactory.getMarshaller(authnRequest);
+
+            marshaller.marshall(authnRequest);
+
+            org.apache.xml.security.Init.init();
+            Signer.signObjects(signatureList);
+            return authnRequest;
+
+        } catch (Exception e) {
+            throw new SSOException("Error while signing the SAML Request message", e);
+        }
+    }
+
+    public static LogoutRequest setSignature(LogoutRequest logoutRequest, String signatureAlgorithm,
+            X509Credential cred) throws SSOException {
+        try {
+            Signature signature = setSignatureRaw(signatureAlgorithm,cred);
+
+            logoutRequest.setSignature(signature);
+
+            List<Signature> signatureList = new ArrayList<Signature>();
+            signatureList.add(signature);
+
+            // Marshall and Sign
+            MarshallerFactory marshallerFactory =
+                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            Marshaller marshaller = marshallerFactory.getMarshaller(logoutRequest);
+
+            marshaller.marshall(logoutRequest);
+
+            org.apache.xml.security.Init.init();
+            Signer.signObjects(signatureList);
+            return logoutRequest;
+
+        } catch (Exception e) {
+            throw new SSOException("Error while signing the Logout Request message", e);
+        }
+    }
+
+    private static Signature setSignatureRaw(String signatureAlgorithm, X509Credential cred) throws SSOException {
+        Signature signature = (Signature) buildXMLObject(Signature.DEFAULT_ELEMENT_NAME);
+        signature.setSigningCredential(cred);
+        signature.setSignatureAlgorithm(signatureAlgorithm);
+        signature.setCanonicalizationAlgorithm(Canonicalizer.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
+
+        try {
+            KeyInfo keyInfo = (KeyInfo) buildXMLObject(KeyInfo.DEFAULT_ELEMENT_NAME);
+            X509Data data = (X509Data) buildXMLObject(X509Data.DEFAULT_ELEMENT_NAME);
+            org.opensaml.xml.signature.X509Certificate cert =
+                    (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
+            String value =
+                    org.apache.xml.security.utils.Base64.encode(cred.getEntityCertificate().getEncoded());
+            cert.setValue(value);
+            data.getX509Certificates().add(cert);
+            keyInfo.getX509Datas().add(data);
+            signature.setKeyInfo(keyInfo);
+            return signature;
+
+        } catch (CertificateEncodingException e) {
+            throw new SSOException("Error getting certificate", e);
+        }
+    }
+
+    private static XMLObject buildXMLObject(QName objectQName) throws SSOException {
+        doBootstrap();
+        XMLObjectBuilder builder =
+                org.opensaml.xml.Configuration.getBuilderFactory()
+                        .getBuilder(objectQName);
+        if (builder == null) {
+            throw new SSOException("Unable to retrieve builder for object QName " +
+                    objectQName);
+        }
+        return builder.buildObject(objectQName.getNamespaceURI(), objectQName.getLocalPart(),
+                objectQName.getPrefix());
+    }
+
+    public static void validateSignature(SSOAgentConfiguration ssoAgentConfig, Response response, Assertion assertion) throws SSOException {
+
+        if (SSOAgentDataHolder.getInstance().getSignatureValidator() != null) {
+            //Custom implementation of signature validation
+            SAMLSignatureValidator signatureValidatorUtility = (SAMLSignatureValidator) SSOAgentDataHolder
+                    .getInstance().getSignatureValidator();
+            signatureValidatorUtility.validateSignature(response, assertion, ssoAgentConfig);
+        } else {
+            //If custom implementation not found, Execute the default implementation
+            if (ssoAgentConfig.getSAML2().isResponseSigned()) {
+                if (response.getSignature() == null) {
+                    throw new SSOException("SAML2 Response signing is enabled, but signature element not found in SAML2 Response element");
+                } else {
+                    try {
+                        SignatureValidator validator = new SignatureValidator(
+                                new X509CredentialImpl(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
+                        validator.validate(response.getSignature());
+                    } catch (ValidationException e) {
+                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        throw new SSOException("Signature validation failed for SAML2 Response");
+                    }
+                }
+            }
+            if (ssoAgentConfig.getSAML2().isAssertionSigned()) {
+                if (assertion.getSignature() == null) {
+                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not found in SAML2 Assertion element");
+                } else {
+                    try {
+                        SignatureValidator validator = new SignatureValidator(
+                                new X509CredentialImpl(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
+                        validator.validate(assertion.getSignature());
+                    } catch (ValidationException e) {
+                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        throw new SSOException("Signature validation failed for SAML2 Assertion");
+                    }
+                }
+            }
         }
     }
 }

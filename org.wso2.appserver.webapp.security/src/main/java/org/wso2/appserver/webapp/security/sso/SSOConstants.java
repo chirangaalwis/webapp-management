@@ -59,7 +59,10 @@ public class SSOConstants {
 
         public static class KeyStoreConfiguration {
             public static final String KEYSTORE_PATH = "Keystore.Path";
-            public static final String KEYSTORE_PASSWORD = "Keystore.Path";
+            public static final String KEYSTORE_PASSWORD = "Keystore.Password";
+
+            public static final String SSL_CERTIFICATE_ALIAS = "wso2carbon";
+            public static final String SSL_CERTIFICATE_PRIVATE_KEY_PASSWORD = "wso2carbon";
 
             /**
              * Prevents instantiating the KeyStoreConfiguration nested class.

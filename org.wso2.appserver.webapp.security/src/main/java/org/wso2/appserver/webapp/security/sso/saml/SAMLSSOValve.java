@@ -21,8 +21,8 @@ import org.apache.catalina.connector.Response;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentRequestResolver;
-import org.wso2.appserver.webapp.security.sso.model.RelayState;
-import org.wso2.appserver.webapp.security.sso.model.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.security.sso.bean.RelayState;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
 import java.io.IOException;
@@ -56,24 +56,7 @@ public class SAMLSSOValve extends SingleSignOn {
 
     public SAMLSSOValve() throws SSOException {
         getLogger().log(Level.INFO, "Initializing SAMLSSOValve...");
-
-        Path ssoSPConfigFilePath = Paths.
-                get(SSOUtils.getTomcatConfigurationHome().toString(),
-                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
-
-        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
-        if (Files.exists(ssoSPConfigFilePath)) {
-            try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
-                getSSOSPConfigProperties().load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration "
-                        + "data from sso-sp-config.properties file.");
-            } catch (IOException e) {
-                throw new SSOException("Error when loading global single-sign-on configuration data "
-                        + "from sso-sp-config.properties file.");
-            }
-        } else {
-            throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
-        }
+        loadSSOConfigurationProperties(getSSOSPConfigProperties());
     }
 
     private static Logger getLogger() {
@@ -120,8 +103,9 @@ public class SAMLSSOValve extends SingleSignOn {
                 ssoAgentConfiguration = new SSOAgentConfiguration();
                 ssoAgentConfiguration.initConfig(getSSOSPConfigProperties());
 
-                //  TODO: user model, X.509 certificate handling
-
+                Optional.ofNullable(SSOUtils.generateSSOAgentX509Credential()).
+                        ifPresent(ssoAgentX509Credential -> ssoAgentConfiguration.getSAML2().
+                                setSSOAgentX509Credential((SSOAgentX509Credential) ssoAgentX509Credential.get()));
                 Optional.of(SSOUtils.generateIssuerID(request.getContextPath())).
                         ifPresent(id -> ssoAgentConfiguration.getSAML2().setSPEntityId((String) id.get()));
                 Optional.of(SSOUtils.generateConsumerUrl(request.getContextPath(), getSSOSPConfigProperties())).
@@ -258,57 +242,6 @@ public class SAMLSSOValve extends SingleSignOn {
     }
 
     /**
-     * Sets up the {@code SSOAgentConfiguration} instance keystore configurations based on configurations specified
-     * in the keystore.properties.
-     *
-     * @param ssoAgentConfiguration the {@link SSOAgentConfiguration} instance
-     * @throws SSOException if configuration properties set are invalid
-     */
-    private void prepareKeystore(SSOAgentConfiguration ssoAgentConfiguration) throws SSOException {
-        //  TODO: CONSIDER LOADING ONLY IF SIGNING IS SPECIFIED
-        Path keystoreConfigurationFilePath = Paths.get(SSOUtils.getTomcatConfigurationHome().toString(),
-                SSOConstants.SAMLSSOValveConstants.KEYSTORE_SETTINGS_FILE_NAME);
-        if (Optional.ofNullable(ssoAgentConfiguration).isPresent()) {
-            if (Files.exists(keystoreConfigurationFilePath)) {
-                try (InputStream inputStream = Files.newInputStream(keystoreConfigurationFilePath)) {
-                    Properties properties = new Properties();
-                    properties.load(inputStream);
-
-                    Optional<String> keystorePathString = Optional.ofNullable(properties.
-                            getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH));
-                    if (keystorePathString.isPresent()) {
-                        Path keystorePath = Paths.get(keystorePathString.get());
-                        if (Files.exists(keystorePath)) {
-                            ssoAgentConfiguration.setKeyStoreStream(Files.newInputStream(keystorePath));
-
-                            Optional<String> keystorePasswordString = Optional.ofNullable(properties.
-                                    getProperty(SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.
-                                            KEYSTORE_PASSWORD));
-                            if (keystorePasswordString.isPresent()) {
-                                ssoAgentConfiguration.setKeyStorePassword(keystorePasswordString.get());
-                            } else {
-                                throw new SSOException("Password specified under " +
-                                        SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH +
-                                        " cannot be null.");
-                            }
-                        } else {
-                            throw new SSOException("File path specified under " +
-                                    SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH +
-                                    " does not exist.");
-                        }
-                    } else {
-                        throw new SSOException("File path specified under " +
-                                SSOConstants.SSOAgentConfiguration.KeyStoreConfiguration.KEYSTORE_PATH +
-                                " cannot be null.");
-                    }
-                } catch (IOException e) {
-                    throw new SSOException("Error when reading the keystore.properties file.", e);
-                }
-            }
-        }
-    }
-
-    /**
      * Returns the redirect path after single-logout (SLO), read from the {@code request}.
      * </p>
      * If the redirect path is read from session then it is removed. Priority order of reading the redirect path is from
@@ -346,5 +279,35 @@ public class SAMLSSOValve extends SingleSignOn {
         getLogger().log(Level.FINE, "Redirect path = " + redirectPath);
 
         return redirectPath.get();
+    }
+
+    /**
+     * Loads the property content defined in sso-sp-config.properties file to the specified {@code Properties} data
+     * structure.
+     * </p>
+     * This is a utility method used during the initialization of this class instance.
+     *
+     * @param properties the {@link Properties} structure to which the file content is to be loaded.
+     * @throws SSOException if an error occurs during the loading of the file content or if the sso-sp-config.properties
+     *                      file cannot be found
+     */
+    private static void loadSSOConfigurationProperties(Properties properties) throws SSOException {
+        Path ssoSPConfigFilePath = Paths.
+                get(SSOUtils.getCatalinaConfigurationHome().toString(),
+                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
+
+        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
+        if (Files.exists(ssoSPConfigFilePath)) {
+            try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
+                properties.load(fileInputStream);
+                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
+                        "data from sso-sp-config.properties file.");
+            } catch (IOException e) {
+                throw new SSOException("Error when loading global single-sign-on configuration data " +
+                        "from sso-sp-config.properties file.");
+            }
+        } else {
+            throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
+        }
     }
 }

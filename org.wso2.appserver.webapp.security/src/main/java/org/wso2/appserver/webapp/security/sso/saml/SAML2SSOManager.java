@@ -15,6 +15,7 @@
  */
 package org.wso2.appserver.webapp.security.sso.saml;
 
+import org.apache.xml.security.signature.XMLSignature;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
@@ -26,6 +27,7 @@ import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.Conditions;
+import org.opensaml.saml2.core.EncryptedAssertion;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -50,9 +52,10 @@ import org.opensaml.xml.util.Base64;
 import org.w3c.dom.Element;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentDataHolder;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentSessionManager;
-import org.wso2.appserver.webapp.security.sso.model.LoggedInSessionBean;
-import org.wso2.appserver.webapp.security.sso.model.SSOAgentConfiguration;
+import org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
 import java.io.UnsupportedEncodingException;
@@ -80,8 +83,8 @@ public class SAML2SSOManager {
 
     public SAML2SSOManager(SSOAgentConfiguration ssoAgentConfiguration) throws SSOException {
         setSSOAgentConfig(ssoAgentConfiguration);
-        //  TODO: uncomment later
-//        loadCustomSignatureValidatorClass();
+        //  TODO: changed
+        loadCustomSignatureValidatorClass();
         SSOUtils.doBootstrap();
     }
 
@@ -165,17 +168,24 @@ public class SAML2SSOManager {
         RequestAbstractType requestMessage;
         if (!isLogout) {
             requestMessage = buildAuthnRequest(request);
-            /*if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
-                //  TODO: signing the AuthnRequest - setSignature method in SSOUtils, X509 Credentials considered
-            }*/
+            //  TODO: changed
+            if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
+                requestMessage = SSOUtils.
+                        setSignature((AuthnRequest) requestMessage, XMLSignature.ALGO_ID_SIGNATURE_RSA,
+                                new X509CredentialImpl(getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+            }
         } else {
             LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
                     getAttribute(SSOConstants.SESSION_BEAN_NAME);
             if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
                         sessionBean.getSAML2SSO().getSessionIndex());
-
-                //  TODO: LOGOUT REQUEST SIGNATURE
+                //  TODO: changed
+                if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
+                    requestMessage = SSOUtils.setSignature((LogoutRequest) requestMessage,
+                            XMLSignature.ALGO_ID_SIGNATURE_RSA,
+                            new X509CredentialImpl(getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                }
             } else {
                 throw new SSOException("Single-logout (SLO) Request cannot be built. " +
                         "Single-sign-on (SSO) Session is null.");
@@ -348,7 +358,18 @@ public class SAML2SSOManager {
 
         Optional<Assertion> assertion = Optional.empty();
         if (getSSOAgentConfig().getSAML2().isAssertionEncrypted()) {
-            //  TODO: to be completed under assertion signing
+            //  TODO: changed
+            List<EncryptedAssertion> encryptedAssertions = saml2Response.getEncryptedAssertions();
+            EncryptedAssertion encryptedAssertion = null;
+            if (!org.apache.commons.collections.CollectionUtils.isEmpty(encryptedAssertions)) {
+                encryptedAssertion = encryptedAssertions.get(0);
+                try {
+                    assertion = Optional.ofNullable(SSOUtils.getDecryptedAssertion(getSSOAgentConfig(), encryptedAssertion));
+                } catch (Exception e) {
+                    getLogger().log(Level.FINE, "Assertion decryption failure : ", e);
+                    throw new SSOException("Unable to decrypt the SAML2 Assertion");
+                }
+            }
         } else {
             Optional<List<Assertion>> assertions = Optional.ofNullable(saml2Response.getAssertions());
             if ((assertions.isPresent()) && (!assertions.get().isEmpty())) {
@@ -390,7 +411,8 @@ public class SAML2SSOManager {
         validateAudienceRestriction(assertion.get());
 
         //  Validate signature
-//        validateSignature(saml2Response, assertion);
+        //  TODO: changed
+        SSOUtils.validateSignature(getSSOAgentConfig(), saml2Response, assertion.get());
 
         //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(SSOUtils.marshall(assertion.get()));
@@ -499,7 +521,7 @@ public class SAML2SSOManager {
     /**
      * Loads a custom signature validator class specified in the SSO Agent configurations.
      */
-    /*private void loadCustomSignatureValidatorClass() {
+    private void loadCustomSignatureValidatorClass() {
         //  Load custom Signature Validator Class
         Optional.ofNullable(getSSOAgentConfig()).ifPresent(
                 agent -> Optional.ofNullable(agent.getSAML2().getSignatureValidatorImplClass()).ifPresent(implClass -> {
@@ -510,7 +532,7 @@ public class SAML2SSOManager {
                         logger.log(Level.SEVERE, "Error loading custom signature validator class", e);
                     }
                 }));
-    }*/
+    }
 
     /**
      * Returns true if the identity provider cannot authenticate the principal passively, as requested, else false.

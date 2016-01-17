@@ -17,7 +17,6 @@ package org.wso2.appserver.webapp.security.sso.agent;
 
 import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
-import org.wso2.appserver.webapp.security.sso.model.SSOAgentConfiguration;
 
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;

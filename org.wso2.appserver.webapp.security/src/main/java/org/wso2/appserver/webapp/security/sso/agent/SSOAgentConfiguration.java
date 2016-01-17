@@ -13,19 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.security.sso.model;
+package org.wso2.appserver.webapp.security.sso.agent;
 
 import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
 import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,10 +39,6 @@ import java.util.stream.Stream;
  * @since 6.0.0
  */
 public class SSOAgentConfiguration {
-
-    // TODO: possible use of catalina X509 certificate reader
-    // TODO: added new features in the new carbon-identity version master branch
-
     private static final Logger logger = Logger.getLogger(SSOAgentConfiguration.class.getName());
 
     private Boolean isSAML2SSOLoginEnabled;
@@ -61,10 +52,6 @@ public class SSOAgentConfiguration {
 
     private SAML2 saml2;
     private OAuth2 oauth2;
-
-    private InputStream keyStoreStream;
-    private String keyStorePassword;
-    private KeyStore keyStore;
 
     //  An instance field initialization block
     {
@@ -140,33 +127,6 @@ public class SSOAgentConfiguration {
 
     private void setOAuth2(OAuth2 oauth2) {
         this.oauth2 = oauth2;
-    }
-
-    public KeyStore getKeyStore() throws SSOException {
-        if (!Optional.ofNullable(keyStore).isPresent()) {
-            setKeyStore(readKeyStore(getKeyStoreStream(), getKeyStorePassword()));
-        }
-        return keyStore;
-    }
-
-    public void setKeyStore(KeyStore keyStore) {
-        this.keyStore = keyStore;
-    }
-
-    private String getKeyStorePassword() {
-        return keyStorePassword;
-    }
-
-    public void setKeyStorePassword(String keyStorePassword) {
-        this.keyStorePassword = keyStorePassword;
-    }
-
-    private InputStream getKeyStoreStream() {
-        return keyStoreStream;
-    }
-
-    public void setKeyStoreStream(InputStream keyStoreStream) {
-        this.keyStoreStream = keyStoreStream;
     }
 
     /**
@@ -400,28 +360,26 @@ public class SSOAgentConfiguration {
             throw new SSOException("Single Logout enabled, but SLO URL not configured.");
         }
 
-        // TODO: SSOAgentX509Credential has to be considered
-
-        /*if (isSAML2SSOLoginEnabled() &&
-                (saml2Instance.isAssertionSigned() ||
-                saml2Instance.isAssertionEncrypted() || saml2Instance.isResponseSigned() ||
-                        saml2Instance.isRequestSigned()) && saml2.ssoAgentX509Credential == null) {
+        if (isSAML2SSOLoginEnabled() &&
+                (getSAML2().isAssertionSigned() || getSAML2().isAssertionEncrypted() || getSAML2().isResponseSigned() ||
+                        getSAML2().isRequestSigned()) &&
+                (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential()).isPresent())) {
             getLogger().log(Level.FINE,
-                    "\'SSOAgentX509Credential\' not configured. Defaulting to " + SSOAgentCarbonX509Credential.class
+                    "\'SSOAgentX509Credential\' not configured. Defaulting to " + SSOAgentX509Credential.class
                             .getName());
         }
 
         if (isSAML2SSOLoginEnabled() &&
-                (saml2Instance.isAssertionSigned() || saml2Instance.isResponseSigned()) &&
-                saml2.ssoAgentX509Credential.getEntityCertificate() == null) {
-            throw new SSOAgentException("Public certificate of IdP not configured");
+                (getSAML2().isAssertionSigned() || getSAML2().isResponseSigned()) &&
+                (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential().getEntityCertificate()).isPresent())) {
+            throw new SSOException("Public certificate of IdP not configured");
         }
 
         if (isSAML2SSOLoginEnabled() &&
-                (saml2Instance.isRequestSigned() || saml2Instance.isAssertionEncrypted()) &&
-                saml2.ssoAgentX509Credential.getPrivateKey() == null) {
-            throw new SSOAgentException("Private key of SP not configured");
-        }*/
+                (getSAML2().isRequestSigned() || getSAML2().isAssertionEncrypted()) &&
+                (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential().getPrivateKey()).isPresent())) {
+            throw new SSOException("Private key of SP not configured");
+        }
 
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() &&
                 (!Optional.ofNullable(getOAuth2().getTokenURL()).isPresent())) {
@@ -440,28 +398,6 @@ public class SSOAgentConfiguration {
     }
 
     /**
-     * Returns a {@code KeyStore} from the specified {@code InputStream} using the keystore password.
-     *
-     * @param inputStream   the key store file {@link InputStream}
-     * @param storePassword the password to the keystore
-     * @return a {@link KeyStore} instance
-     * @throws SSOException if an error occurs while loading the key store or if the {@code storePassword} is null
-     */
-    private KeyStore readKeyStore(InputStream inputStream, String storePassword) throws SSOException {
-        if (!Optional.ofNullable(storePassword).isPresent()) {
-            throw new SSOException("KeyStore password can not be null.");
-        }
-        try (InputStream keystoreInputStream = inputStream) {
-            String keyStoreType = "JKS";
-            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-            keyStore.load(keystoreInputStream, storePassword.toCharArray());
-            return keyStore;
-        } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
-            throw new SSOException("Error while loading key store.", e);
-        }
-    }
-
-    /**
      * A nested class which defines the SAML 2.0 SSO configuration properties.
      */
     public static class SAML2 {
@@ -473,7 +409,7 @@ public class SSOAgentConfiguration {
         private Boolean isSLOEnabled;
         private String sloURL;
         private String attributeConsumingServiceIndex;
-//        private SSOAgentX509Credential ssoAgentX509Credential = null;
+        private SSOAgentX509Credential ssoAgentX509Credential;
         private Boolean isAssertionSigned;
         private Boolean isAssertionEncrypted;
         private Boolean isResponseSigned;
@@ -558,15 +494,13 @@ public class SSOAgentConfiguration {
             this.attributeConsumingServiceIndex = attributeConsumingServiceIndex;
         }
 
-        // TODO: SSOAgentX509Credential has to be considered
-
-        /*public SSOAgentX509Credential getSSOAgentX509Credential() {
+        public SSOAgentX509Credential getSSOAgentX509Credential() {
             return ssoAgentX509Credential;
         }
 
         public void setSSOAgentX509Credential(SSOAgentX509Credential ssoAgentX509Credential) {
             this.ssoAgentX509Credential = ssoAgentX509Credential;
-        }*/
+        }
 
         public Boolean isAssertionSigned() {
             return isAssertionSigned;

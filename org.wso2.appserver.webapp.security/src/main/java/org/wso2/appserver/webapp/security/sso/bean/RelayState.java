@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.security.sso.model;
+package org.wso2.appserver.webapp.security.sso.bean;
 
 import java.io.Serializable;
 import java.util.Map;
