@@ -57,6 +57,7 @@
                             <exclude>org.apache.tomcat.embed:tomcat-embed-core</exclude>
                             <exclude>org.bouncycastle:bcprov-jdk15on</exclude>
                             <exclude>commons-lang:commons-lang</exclude>
+                            <exclude>commons-collections:commons-collections</exclude>
                         </excludes>
                     </artifactSet>
                     <finalName>${project.artifactId}.dependencies</finalName>

@@ -16,12 +16,12 @@
 package org.wso2.appserver.webapp.security.sso;
 
 /**
- * This class defines the constants utilized in the single-sign-on (SSO) implementation.
+ * This class defines the constants utilized used within the org.wso2.appserver.webapp.security.sso.
  *
  * @since 6.0.0
  */
 public class SSOConstants {
-    public static final String SESSION_BEAN_NAME = "org.wso2.carbon.identity.sso.agent.LoggedInSessionBean";
+    public static final String SESSION_BEAN_NAME = "org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean";
 
     /**
      * Prevents instantiating the SSOConstants class.
@@ -80,6 +80,7 @@ public class SSOConstants {
             public static final String IS_FORCE_AUTHN = "SAML2.IsForceAuthn";
             public static final String RELAY_STATE = "SAML2.RelayState";
             public static final String POST_BINDING_REQUEST_HTML_PAYLOAD = "SAML2.PostBindingRequestHTMLPayload";
+            public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
 
             //  Digital signature configuration properties
             public static final String KEYSTORE_PATH = "SAML.KeyStorePath";
@@ -87,7 +88,6 @@ public class SSOConstants {
             public static final String IDP_PUBLIC_CERTIFICATE_ALIAS = "SAML.IdPCertAlias";
             public static final String SP_PRIVATE_KEY_ALIAS = "SAML.PrivateKeyAlias";
             public static final String SP_PRIVATE_KEY_PASSWORD = "SAML.PrivateKeyAlias";
-            public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
 
             /**
              * Prevents instantiating the SAML2 nested class.

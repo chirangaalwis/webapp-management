@@ -29,30 +29,36 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 
-//  TODO: ANALYZE, COMMENTS
-public class X509CredentialImpl implements X509Credential {
+/**
+ * This class represents an entity credential associated with X.509 Public Key Infrastructure.
+ * </p>
+ * This class implements the org.opensaml.xml.security.x509.X509Credential interface.
+ *
+ * @since 6.0.0
+ */
+public class X509CredentialImplementation implements X509Credential {
+    private PublicKey publicKey;
+    private X509Certificate entityCertificate;
+    private PrivateKey privateKey;
 
-    private PublicKey publicKey = null;
-    private X509Certificate entityCertificate = null;
-    private PrivateKey privateKey = null;
-
-    public X509CredentialImpl(X509Certificate cert) {
-        publicKey = cert.getPublicKey();
-        this.entityCertificate = cert;
+    public X509CredentialImplementation(X509Certificate certificate) {
+        setPublicKey(certificate.getPublicKey());
+        setEntityCertificate(certificate);
     }
 
-    public X509CredentialImpl(SSOAgentX509Credential credential) throws SSOException {
-        publicKey = credential.getPublicKey();
-        this.entityCertificate = credential.getEntityCertificate();
-        this.privateKey = credential.getPrivateKey();
+    public X509CredentialImplementation(SSOAgentX509Credential credential) throws SSOException {
+        setPublicKey(credential.getPublicKey());
+        setEntityCertificate(credential.getEntityCertificate());
+        setPrivateKey(credential.getPrivateKey());
     }
 
-    /**
-     * Retrieves the publicKey
-     */
     @Override
     public PublicKey getPublicKey() {
         return publicKey;
+    }
+
+    private void setPublicKey(PublicKey publicKey) {
+        this.publicKey = publicKey;
     }
 
     @Override
@@ -60,21 +66,31 @@ public class X509CredentialImpl implements X509Credential {
         return privateKey;
     }
 
+    private void setPrivateKey(PrivateKey privateKey) {
+        this.privateKey = privateKey;
+    }
+
     @Override
     public X509Certificate getEntityCertificate() {
         return entityCertificate;
     }
 
-    // ********** Not implemented **************************************************************
+    private void setEntityCertificate(X509Certificate entityCertificate) {
+        this.entityCertificate = entityCertificate;
+    }
+
+    /**
+     * Following methods are not implemented.
+     */
 
     @Override
     public Collection<X509CRL> getCRLs() {
-        return new ArrayList<X509CRL>();
+        return new ArrayList<>();
     }
 
     @Override
     public Collection<X509Certificate> getEntityCertificateChain() {
-        return new ArrayList<X509Certificate>();
+        return new ArrayList<>();
     }
 
     @Override
@@ -94,7 +110,7 @@ public class X509CredentialImpl implements X509Credential {
 
     @Override
     public Collection<String> getKeyNames() {
-        return new ArrayList<String>();
+        return new ArrayList<>();
     }
 
     @Override

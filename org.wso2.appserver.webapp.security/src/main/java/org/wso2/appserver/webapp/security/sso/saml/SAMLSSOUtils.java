@@ -13,39 +13,26 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.security.sso.util;
+package org.wso2.appserver.webapp.security.sso.saml;
 
+import org.apache.xml.security.Init;
 import org.apache.xml.security.c14n.Canonicalizer;
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AuthnRequest;
-import org.opensaml.saml2.core.EncryptedAssertion;
-import org.opensaml.saml2.core.LogoutRequest;
-import org.opensaml.saml2.core.RequestAbstractType;
-import org.opensaml.saml2.core.Response;
+import org.opensaml.saml2.core.*;
 import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilder;
 import org.opensaml.xml.encryption.EncryptedKey;
-import org.opensaml.xml.io.Marshaller;
-import org.opensaml.xml.io.MarshallerFactory;
-import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.io.Unmarshaller;
-import org.opensaml.xml.io.UnmarshallerFactory;
-import org.opensaml.xml.io.UnmarshallingException;
+import org.opensaml.xml.io.*;
 import org.opensaml.xml.security.SecurityHelper;
 import org.opensaml.xml.security.credential.Credential;
 import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
 import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
 import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.KeyInfo;
-import org.opensaml.xml.signature.Signature;
-import org.opensaml.xml.signature.Signer;
-import org.opensaml.xml.signature.SignatureValidator;
-import org.opensaml.xml.signature.X509Data;
+import org.opensaml.xml.signature.*;
 import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
 import org.opensaml.xml.validation.ValidationException;
@@ -57,17 +44,19 @@ import org.w3c.dom.ls.LSOutput;
 import org.w3c.dom.ls.LSSerializer;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.SSOUtils;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.agent.SSOAgentDataHolder;
-import org.wso2.appserver.webapp.security.sso.saml.X509CredentialImpl;
+import org.wso2.appserver.webapp.security.sso.util.SSOAgentDataHolder;
+import org.wso2.appserver.webapp.security.sso.util.SAMLSignatureValidator;
+import org.wso2.appserver.webapp.security.sso.util.XMLEntityResolver;
 import org.xml.sax.SAXException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.io.Writer;
+import javax.crypto.SecretKey;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -82,42 +71,23 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
-import javax.crypto.SecretKey;
-import javax.servlet.http.HttpServletResponse;
-import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 /**
- * This class contains utility methods used for the implementation of the single-sign-on (SSO) functionality.
+ * This class defines the implementation of utility functions associated with SAML 2.0 based
+ * single-sign-on (SSO) process.
  *
  * @since 6.0.0
  */
-public class SSOUtils {
+public class SAMLSSOUtils {
     private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
-    private static final Random random = new Random();
-
     private static boolean bootStrapped;
-
-    //  a static field initialization block
-    static {
-        setBootStrapped(false);
-    }
 
     public static Logger getLogger() {
         return logger;
-    }
-
-    private static Random getRandom() {
-        return random;
     }
 
     private static boolean isBootStrapped() {
@@ -125,136 +95,7 @@ public class SSOUtils {
     }
 
     private static void setBootStrapped(boolean bootStrapped) {
-        SSOUtils.bootStrapped = bootStrapped;
-    }
-
-    /**
-     * Returns a {@code Path} instance representing the base of Apache Tomcat instances.
-     *
-     * @return a {@link Path} instance representing the base of Apache Tomcat instances
-     * @throws SSOException if CATALINA_BASE environmental variable has not been set
-     */
-    public static Path getCatalinaBase() throws SSOException {
-        String envVariableValue = System.getProperty(SSOConstants.SAMLSSOValveConstants.CATALINA_BASE);
-        if (Optional.ofNullable(envVariableValue).isPresent()) {
-            return Paths.get(envVariableValue);
-        } else {
-            throw new SSOException("CATALINA_BASE environmental variable has not been set.");
-        }
-    }
-
-    /**
-     * Returns a {@code Path} instance representing the Apache Tomcat configuration home CATALINA_BASE/conf.
-     *
-     * @return a {@link Path} instance representing the Apache Tomcat configuration home CATALINA_BASE/conf
-     * @throws SSOException if CATALINA_BASE environmental variable has not been set
-     */
-    public static Path getCatalinaConfigurationHome() throws SSOException {
-        return Paths.
-                get(getCatalinaBase().toString(), SSOConstants.SAMLSSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
-    }
-
-    /**
-     * Loads the property content defined in sso-sp-config.properties file to the specified {@code Properties} data
-     * structure.
-     * </p>
-     * This is a utility method used during the initialization of this class instance.
-     *
-     * @param properties the {@link Properties} structure to which the file content is to be loaded.
-     * @throws SSOException if an error occurs during the loading of the file content or if the sso-sp-config.properties
-     *                      file cannot be found
-     */
-    public static void loadSSOConfigurationProperties(Properties properties) throws SSOException {
-        Path ssoSPConfigFilePath = Paths.
-                get(SSOUtils.getCatalinaConfigurationHome().toString(),
-                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
-
-        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
-        if (Files.exists(ssoSPConfigFilePath)) {
-            try (InputStream fileInputStream = Files.newInputStream(ssoSPConfigFilePath)) {
-                properties.load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded global single-sign-on configuration " +
-                        "data from sso-sp-config.properties file.");
-            } catch (IOException e) {
-                throw new SSOException("Error when loading global single-sign-on configuration data " +
-                        "from sso-sp-config.properties file.");
-            }
-        } else {
-            throw new SSOException("Unable to find sso-sp-config.properties file in " + ssoSPConfigFilePath);
-        }
-    }
-
-    /**
-     * Generates a unique id for authentication requests.
-     *
-     * @return a unique id for authentication requests
-     */
-    public static String createID() {
-        byte[] bytes = new byte[20]; // 160 bit
-        getRandom().nextBytes(bytes);
-        char[] characterMapping = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' };
-
-        char[] characters = new char[40];
-        IntStream.range(0, bytes.length).forEach(index -> {
-            int left = (bytes[index] >> 4) & 0x0f;
-            int right = bytes[index] & 0x0f;
-            characters[index * 2] = characterMapping[left];
-            characters[index * 2 + 1] = characterMapping[right];
-        });
-
-        return String.valueOf(characters);
-    }
-
-    /**
-     * Returns true if the specified {@code String} is blank, else false.
-     *
-     * @param stringValue the {@link String} to be checked whether it is blank
-     * @return true if the specified {@link String} is blank, else false
-     */
-    public static boolean isBlank(String stringValue) {
-        if ((!Optional.ofNullable(stringValue).isPresent()) || (stringValue.isEmpty())) {
-            return true;
-        }
-        Stream<Character> characterStream = stringValue.chars().
-                mapToObj(intCharacter -> (char) intCharacter).parallel().filter(Character::isWhitespace);
-        return characterStream.count() == stringValue.length();
-    }
-
-    /**
-     * Returns a {@code KeyStore} based on keystore properties specified.
-     *
-     * @param keyStoreConfigurationProperties the keystore properties
-     * @return the {@link KeyStore} instance
-     * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
-     */
-    public static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
-        if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
-            return Optional.empty();
-        }
-
-        Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
-                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH));
-        Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
-                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PASSWORD));
-
-        if (!keystorePasswordString.isPresent() || !keyStorePathString.isPresent()) {
-            return Optional.empty();
-        }
-
-        Path keyStorePath = Paths.get(keyStorePathString.get());
-        if (Files.exists(keyStorePath)) {
-            try (InputStream keystoreInputStream = Files.newInputStream(keyStorePath)) {
-                String keyStoreType = "JKS";
-                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-                keyStore.load(keystoreInputStream, keystorePasswordString.get().toCharArray());
-                return Optional.of(keyStore);
-            } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
-                throw new SSOException("Error while loading key store.", e);
-            }
-        } else {
-            throw new SSOException("File path specified under " +
-                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
-        }
+        SAMLSSOUtils.bootStrapped = bootStrapped;
     }
 
     /**
@@ -265,7 +106,7 @@ public class SSOUtils {
      * @param contextPath the context path of the service provider application
      * @return a unique id value for the SAML 2.0 service provider application based on its context path
      */
-    public static Optional generateIssuerID(String contextPath) {
+    protected static Optional generateIssuerID(String contextPath) {
         if (Optional.ofNullable(contextPath).isPresent()) {
             String issuerId = contextPath.replaceFirst("/webapps", "").replace("/", "_");
             if (issuerId.startsWith("_")) {
@@ -286,33 +127,14 @@ public class SSOUtils {
      * @param ssoSPConfigProperties the global single-sign-on configuration properties
      * @return a SAML 2.0 Assertion Consumer URL based on service provider application context path
      */
-    public static Optional generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
+    protected static Optional generateConsumerUrl(String contextPath, Properties ssoSPConfigProperties) {
         if ((Optional.ofNullable(contextPath).isPresent()) && (Optional.ofNullable(ssoSPConfigProperties).
                 isPresent())) {
-            return Optional.of(ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.APP_SERVER_URL)
-                    + contextPath +
-                    ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.CONSUMER_URL_POSTFIX));
+            return Optional.of(ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.APP_SERVER_URL) +
+                    contextPath + ssoSPConfigProperties.
+                    getProperty(SSOConstants.SAMLSSOValveConstants.CONSUMER_URL_POSTFIX));
         } else {
             return Optional.empty();
-        }
-    }
-
-    /**
-     * Sends character data specified by the {@code htmlPayload} in the servlet response body.
-     *
-     * @param response    the servlet response body in which character data are to be sent
-     * @param htmlPayload the character data to be sent in the servlet body
-     * @throws SSOException if an error occurs while writing character data to the servlet
-     *                      response body
-     */
-    public static void sendCharacterData(HttpServletResponse response, String htmlPayload) throws SSOException {
-        try {
-            Writer writer = response.getWriter();
-            writer.write(htmlPayload);
-            response.flushBuffer();
-            //  Not closing the Writer instance, as its creator is the HttpServletResponse
-        } catch (IOException e) {
-            throw new SSOException("Error occurred while writing to HttpServletResponse.", e);
         }
     }
 
@@ -323,7 +145,7 @@ public class SSOUtils {
      *
      * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
      */
-    public static void doBootstrap() throws SSOException {
+    protected static void doBootstrap() throws SSOException {
         if (!isBootStrapped()) {
             try {
                 DefaultBootstrap.bootstrap();
@@ -343,7 +165,8 @@ public class SSOUtils {
      * @return encoded {@link String} corresponding to the request XML object
      * @throws SSOException if an error occurs while encoding SAML2 request
      */
-    public static String encodeRequestMessage(RequestAbstractType requestMessage, String binding) throws SSOException {
+    protected static String encodeRequestMessage(RequestAbstractType requestMessage, String binding)
+            throws SSOException {
         Marshaller marshaller = Configuration.getMarshallerFactory().getMarshaller(requestMessage);
         Element authDOM;
         try {
@@ -376,7 +199,7 @@ public class SSOUtils {
                     encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
         } else {
             getLogger().log(Level.FINE,
-                    "Unsupported SAML2 HTTP Binding. Defaulting to " + SAMLConstants.SAML2_POST_BINDING_URI + ".");
+                    "Unsupported SAML2 HTTP Binding. Defaulting to " + SAMLConstants.SAML2_POST_BINDING_URI);
             return Base64.
                     encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
         }
@@ -391,7 +214,7 @@ public class SSOUtils {
      * representation
      * @throws SSOException if an error occurs during the marshalling process
      */
-    public static String marshall(XMLObject xmlObject) throws SSOException {
+    protected static String marshall(XMLObject xmlObject) throws SSOException {
         try {
             //  Explicitly sets the special XML parser library to be used, in the global variables
             System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
@@ -419,7 +242,7 @@ public class SSOUtils {
      * @return an XML object from the {@link String} value representing the XML syntax
      * @throws SSOException if an error occurs when unmarshalling the XML string representation
      */
-    public static XMLObject unmarshall(String xmlString) throws SSOException {
+    protected static XMLObject unmarshall(String xmlString) throws SSOException {
         doBootstrap();
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setExpandEntityReferences(false);
@@ -438,128 +261,157 @@ public class SSOUtils {
         }
     }
 
-
-    // TODO: TO BE REFACTORED, COMMENTS
-
-
-    public static Assertion getDecryptedAssertion(SSOAgentConfiguration ssoAgentConfiguration, EncryptedAssertion encryptedAssertion) throws SSOException {
-
+    /**
+     * Returns a decrypted SAML 2.0 {@code Assertion} from the specified SAML 2.0 encrypted {@code Assertion}.
+     *
+     * @param ssoAgentX509Credential credential for the resolver
+     * @param encryptedAssertion     the {@link EncryptedAssertion} instance to be decrypted
+     * @return a decrypted SAML 2.0 {@link Assertion} from the specified SAML 2.0 {@link EncryptedAssertion}
+     * @throws SSOException if an error occurs during the decryption process
+     */
+    protected static Assertion decryptAssertion(SSOAgentX509Credential ssoAgentX509Credential,
+            EncryptedAssertion encryptedAssertion) throws SSOException {
         try {
             KeyInfoCredentialResolver keyResolver = new StaticKeyInfoCredentialResolver(
-                    new X509CredentialImpl(ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
+                    new X509CredentialImplementation(ssoAgentX509Credential));
 
             EncryptedKey key = encryptedAssertion.getEncryptedData().
-                    getKeyInfo().getEncryptedKeys().get(0);
+                    getKeyInfo().getEncryptedKeys().stream().findFirst().get();
             Decrypter decrypter = new Decrypter(null, keyResolver, null);
-            SecretKey dkey = (SecretKey) decrypter.decryptKey(key, encryptedAssertion.getEncryptedData().
+            SecretKey decrypterKey = (SecretKey) decrypter.decryptKey(key, encryptedAssertion.getEncryptedData().
                     getEncryptionMethod().getAlgorithm());
-            Credential shared = SecurityHelper.getSimpleCredential(dkey);
+            Credential shared = SecurityHelper.getSimpleCredential(decrypterKey);
             decrypter = new Decrypter(new StaticKeyInfoCredentialResolver(shared), null, null);
             decrypter.setRootInNewDocument(true);
             return decrypter.decrypt(encryptedAssertion);
         } catch (Exception e) {
-            throw new SSOException("Decrypted assertion error", e);
+            throw new SSOException("Decrypted assertion error.", e);
 
         }
     }
 
-    public static AuthnRequest setSignature(AuthnRequest authnRequest, String signatureAlgorithm,
-            X509Credential credentials) throws SSOException {
+    /**
+     * Applies the XML Digital Signature to the SAML 2.0 based Authentication Request (AuthnRequest).
+     *
+     * @param authnRequest       the SAML 2.0 based Authentication Request (AuthnRequest)
+     * @param signatureAlgorithm the algorithm used to compute the signature
+     * @param credential        the signature signing credential
+     * @return the SAML 2.0 based Authentication Request (AuthnRequest) with XML Digital Signature set
+     * @throws SSOException if an error occurs while signing the SAML 2.0 AuthnRequest message
+     */
+    protected static AuthnRequest setSignature(AuthnRequest authnRequest, String signatureAlgorithm,
+            X509Credential credential) throws SSOException {
         doBootstrap();
         try {
-            Signature signature = setSignatureRaw(signatureAlgorithm, credentials);
-
-
+            Signature signature = setSignatureRaw(signatureAlgorithm, credential);
             authnRequest.setSignature(signature);
 
             List<Signature> signatureList = new ArrayList<>();
             signatureList.add(signature);
 
-            // Marshall and Sign
-            MarshallerFactory marshallerFactory =
-                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            // Marshall and sign
+            MarshallerFactory marshallerFactory = org.opensaml.xml.Configuration.getMarshallerFactory();
             Marshaller marshaller = marshallerFactory.getMarshaller(authnRequest);
-
             marshaller.marshall(authnRequest);
 
-            org.apache.xml.security.Init.init();
+            //  Initializes and configures the library
+            Init.init();
+            //  Signer is responsible for creating the digital signatures for the given XML Objects.
+            //  Signs the XML Objects based on the given order of the Signature list
             Signer.signObjects(signatureList);
             return authnRequest;
-
         } catch (Exception e) {
-            throw new SSOException("Error while signing the SAML Request message", e);
+            throw new SSOException("Error while signing the SAML 2.0 AuthnRequest message.", e);
         }
     }
 
-    public static LogoutRequest setSignature(LogoutRequest logoutRequest, String signatureAlgorithm,
-            X509Credential cred) throws SSOException {
+    /**
+     * Applies the XML Digital Signature to the SAML 2.0 based Logout Request (LogoutRequest).
+     *
+     * @param logoutRequest      the SAML 2.0 based Logout Request (LogoutRequest)
+     * @param signatureAlgorithm the algorithm used to compute the signature
+     * @param credential         the signature signing credential
+     * @return the SAML 2.0 based Logout Request (LogoutRequest) with XML Digital Signature set
+     * @throws SSOException if an error occurs while signing the SAML 2.0 LogoutRequest message
+     */
+    protected static LogoutRequest setSignature(LogoutRequest logoutRequest, String signatureAlgorithm,
+            X509Credential credential) throws SSOException {
         try {
-            Signature signature = setSignatureRaw(signatureAlgorithm,cred);
-
+            Signature signature = setSignatureRaw(signatureAlgorithm, credential);
             logoutRequest.setSignature(signature);
 
-            List<Signature> signatureList = new ArrayList<Signature>();
+            List<Signature> signatureList = new ArrayList<>();
             signatureList.add(signature);
 
             // Marshall and Sign
-            MarshallerFactory marshallerFactory =
-                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            MarshallerFactory marshallerFactory = org.opensaml.xml.Configuration.getMarshallerFactory();
             Marshaller marshaller = marshallerFactory.getMarshaller(logoutRequest);
-
             marshaller.marshall(logoutRequest);
 
-            org.apache.xml.security.Init.init();
+            //  Initializes and configures the library
+            Init.init();
+            //  Signer is responsible for creating the digital signatures for the given XML Objects.
+            //  Signs the XML Objects based on the given order of the Signature list
             Signer.signObjects(signatureList);
             return logoutRequest;
-
         } catch (Exception e) {
-            throw new SSOException("Error while signing the Logout Request message", e);
+            throw new SSOException("Error while signing the SAML 2.0 based LogoutRequest message.", e);
         }
     }
 
-    private static Signature setSignatureRaw(String signatureAlgorithm, X509Credential cred) throws SSOException {
+    /**
+     * Generates an XML Object representing an enveloped or detached XML Digital Signature.
+     *
+     * @param signatureAlgorithm the algorithm used to compute the signature
+     * @param credential         the signature signing credentials
+     * @return an XML Object representing an enveloped or detached XML Digital Signature
+     * @throws SSOException if an error occurs while getting the signature
+     */
+    private static Signature setSignatureRaw(String signatureAlgorithm, X509Credential credential) throws SSOException {
         Signature signature = (Signature) buildXMLObject(Signature.DEFAULT_ELEMENT_NAME);
-        signature.setSigningCredential(cred);
+        signature.setSigningCredential(credential);
         signature.setSignatureAlgorithm(signatureAlgorithm);
         signature.setCanonicalizationAlgorithm(Canonicalizer.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);
 
         try {
             KeyInfo keyInfo = (KeyInfo) buildXMLObject(KeyInfo.DEFAULT_ELEMENT_NAME);
             X509Data data = (X509Data) buildXMLObject(X509Data.DEFAULT_ELEMENT_NAME);
-            org.opensaml.xml.signature.X509Certificate cert =
-                    (org.opensaml.xml.signature.X509Certificate) buildXMLObject(org.opensaml.xml.signature.X509Certificate.DEFAULT_ELEMENT_NAME);
-            String value =
-                    org.apache.xml.security.utils.Base64.encode(cred.getEntityCertificate().getEncoded());
+            X509Certificate cert = (X509Certificate) buildXMLObject(X509Certificate.DEFAULT_ELEMENT_NAME);
+            String value = org.apache.xml.security.utils.Base64.encode(credential.getEntityCertificate().getEncoded());
             cert.setValue(value);
             data.getX509Certificates().add(cert);
             keyInfo.getX509Datas().add(data);
             signature.setKeyInfo(keyInfo);
             return signature;
-
         } catch (CertificateEncodingException e) {
-            throw new SSOException("Error getting certificate", e);
+            throw new SSOException("Error getting certificate.", e);
         }
     }
 
-    private static XMLObject buildXMLObject(QName objectQName) throws SSOException {
+    /**
+     * Builds a SAML 2.0 based XML object using the fully qualified name.
+     *
+     * @param objectQualifiedName fully qualified name
+     * @return a SAML 2.0 based XML object
+     * @throws SSOException if an error occurs while retrieving the builder for the fully qualified name
+     */
+    private static XMLObject buildXMLObject(QName objectQualifiedName) throws SSOException {
         doBootstrap();
-        XMLObjectBuilder builder =
-                org.opensaml.xml.Configuration.getBuilderFactory()
-                        .getBuilder(objectQName);
-        if (builder == null) {
-            throw new SSOException("Unable to retrieve builder for object QName " +
-                    objectQName);
+        XMLObjectBuilder builder = org.opensaml.xml.Configuration.getBuilderFactory().getBuilder(objectQualifiedName);
+        if (!Optional.ofNullable(builder).isPresent()) {
+            throw new SSOException("Unable to retrieve builder for object QName " + objectQualifiedName);
         }
-        return builder.buildObject(objectQName.getNamespaceURI(), objectQName.getLocalPart(),
-                objectQName.getPrefix());
+        return builder.buildObject(objectQualifiedName.getNamespaceURI(), objectQualifiedName.getLocalPart(),
+                objectQualifiedName.getPrefix());
     }
 
-    public static void validateSignature(SSOAgentConfiguration ssoAgentConfig, Response response, Assertion assertion) throws SSOException {
+    //  TODO: TO BE REFACTORED AND COMMENTED
+    protected static void validateSignature(SSOAgentConfiguration ssoAgentConfig, Response response, Assertion assertion) throws SSOException {
 
-        if (SSOAgentDataHolder.getInstance().getSignatureValidator() != null) {
+        if (Optional.ofNullable(SSOAgentDataHolder.getInstance().getObject()).isPresent()) {
             //Custom implementation of signature validation
             SAMLSignatureValidator signatureValidatorUtility = (SAMLSignatureValidator) SSOAgentDataHolder
-                    .getInstance().getSignatureValidator();
+                    .getInstance().getObject();
             signatureValidatorUtility.validateSignature(response, assertion, ssoAgentConfig);
         } else {
             //If custom implementation not found, Execute the default implementation
@@ -569,7 +421,7 @@ public class SSOUtils {
                 } else {
                     try {
                         SignatureValidator validator = new SignatureValidator(
-                                new X509CredentialImpl(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
+                                new X509CredentialImplementation(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
                         validator.validate(response.getSignature());
                     } catch (ValidationException e) {
                         getLogger().log(Level.FINE, "Validation exception : ", e);
@@ -583,7 +435,7 @@ public class SSOUtils {
                 } else {
                     try {
                         SignatureValidator validator = new SignatureValidator(
-                                new X509CredentialImpl(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
+                                new X509CredentialImplementation(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
                         validator.validate(assertion.getSignature());
                     } catch (ValidationException e) {
                         getLogger().log(Level.FINE, "Validation exception : ", e);
@@ -591,6 +443,47 @@ public class SSOUtils {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Utility functions for handling digital signature application and validation.
+     */
+
+    /**
+     * Returns a {@code KeyStore} based on keystore properties specified.
+     *
+     * @param keyStoreConfigurationProperties the keystore properties
+     * @return the {@link KeyStore} instance generated
+     * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
+     */
+    protected static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
+        if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
+            return Optional.empty();
+        }
+
+        Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH));
+        Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PASSWORD));
+
+        if ((!keystorePasswordString.isPresent()) || (!keyStorePathString.isPresent())) {
+            return Optional.empty();
+        }
+
+        Path keyStorePath = Paths.get(keyStorePathString.get());
+        if (Files.exists(keyStorePath)) {
+            try (InputStream keystoreInputStream = Files.newInputStream(keyStorePath)) {
+                String keyStoreType = "JKS";
+                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+                keyStore.load(keystoreInputStream, keystorePasswordString.get().toCharArray());
+                return Optional.of(keyStore);
+            } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+                throw new SSOException("Error while loading key store.", e);
+            }
+        } else {
+            throw new SSOException("File path specified under " +
+                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
         }
     }
 }

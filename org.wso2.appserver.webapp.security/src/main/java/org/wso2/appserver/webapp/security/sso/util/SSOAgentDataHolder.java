@@ -13,25 +13,43 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.security.sso.agent;
+package org.wso2.appserver.webapp.security.sso.util;
 
+/**
+ * This is a singleton class which acts as a holder for an {@code Object} instance during the duration of the
+ * single-sign-on (SSO) process.
+ *
+ * @since 6.0.0
+ */
 public class SSOAgentDataHolder {
-    private Object signatureValidator = null;
+    private static SSOAgentDataHolder instance;
 
-    private static SSOAgentDataHolder instance = new SSOAgentDataHolder();
+    private Object object;
 
+    //  a static initialization block
+    static {
+        setInstance(new SSOAgentDataHolder());
+    }
+
+    /**
+     * Prevents instantiating the SSOAgentDataHolder class.
+     */
     private SSOAgentDataHolder() {
     }
 
-    public Object getSignatureValidator() {
-        return signatureValidator;
+    public Object getObject() {
+        return object;
     }
 
-    public void setSignatureValidator(Object signatureValidator) {
-        this.signatureValidator = signatureValidator;
+    public void setObject(Object object) {
+        this.object = object;
     }
 
     public static SSOAgentDataHolder getInstance() {
         return instance;
+    }
+
+    private static void setInstance(SSOAgentDataHolder instance) {
+        SSOAgentDataHolder.instance = instance;
     }
 }

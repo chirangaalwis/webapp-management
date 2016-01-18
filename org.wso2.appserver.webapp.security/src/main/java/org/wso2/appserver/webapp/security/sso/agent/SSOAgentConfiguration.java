@@ -19,7 +19,7 @@ import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
-import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.SSOUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -372,33 +372,33 @@ public class SSOAgentConfiguration {
         if (isSAML2SSOLoginEnabled() &&
                 (getSAML2().isAssertionSigned() || getSAML2().isResponseSigned()) &&
                 (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential().getEntityCertificate()).isPresent())) {
-            throw new SSOException("Public certificate of IdP not configured");
+            throw new SSOException("Public certificate of IdP not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() &&
                 (getSAML2().isRequestSigned() || getSAML2().isAssertionEncrypted()) &&
                 (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential().getPrivateKey()).isPresent())) {
-            throw new SSOException("Private key of SP not configured");
+            throw new SSOException("Private key of SP not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() &&
                 (!Optional.ofNullable(getOAuth2().getTokenURL()).isPresent())) {
-            throw new SSOException("OAuth2 Token endpoint not configured");
+            throw new SSOException("OAuth2 Token endpoint not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() &&
                 (!Optional.ofNullable(getOAuth2().getClientId()).isPresent())) {
-            throw new SSOException("OAuth2 Client Id not configured");
+            throw new SSOException("OAuth2 Client Id not configured.");
         }
 
         if (isSAML2SSOLoginEnabled() && isOAuth2SAML2GrantEnabled() &&
                 (!Optional.ofNullable(getOAuth2().getClientSecret()).isPresent())) {
-            throw new SSOException("OAuth2 Client Secret not configured");
+            throw new SSOException("OAuth2 Client Secret not configured.");
         }
     }
 
     /**
-     * A nested class which defines the SAML 2.0 SSO configuration properties.
+     * A nested class which defines the SAML 2.0 single-sign-on (SSO) configuration properties.
      */
     public static class SAML2 {
         private String httpBinding;
@@ -576,7 +576,7 @@ public class SSOAgentConfiguration {
     }
 
     /**
-     * A nested class which defines the OAuth2 SSO configuration properties.
+     * A nested class which defines the OAuth2 single-sign-on (SSO) configuration properties.
      */
     public static class OAuth2 {
         private String tokenURL;

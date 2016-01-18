@@ -21,7 +21,7 @@ import org.opensaml.xml.signature.SignatureValidator;
 import org.opensaml.xml.validation.ValidationException;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.saml.X509CredentialImpl;
+import org.wso2.appserver.webapp.security.sso.saml.X509CredentialImplementation;
 
 public class SAMLSignatureValidatorImpl implements SAMLSignatureValidator {
 
@@ -35,7 +35,7 @@ public class SAMLSignatureValidatorImpl implements SAMLSignatureValidator {
                         "SAML2 Response signing is enabled, but signature element not found in SAML2 Response element");
             } else {
                 try {
-                    SignatureValidator validator = new SignatureValidator(new X509CredentialImpl(
+                    SignatureValidator validator = new SignatureValidator(new X509CredentialImplementation(
                             ssoAgentConfig.getSAML2().getSSOAgentX509Credential().getEntityCertificate()));
                     validator.validate(response.getSignature());
                 } catch (ValidationException e) {
@@ -49,7 +49,7 @@ public class SAMLSignatureValidatorImpl implements SAMLSignatureValidator {
                         "SAML2 Assertion signing is enabled, but signature element not found in SAML2 Assertion element");
             } else {
                 try {
-                    SignatureValidator validator = new SignatureValidator(new X509CredentialImpl(
+                    SignatureValidator validator = new SignatureValidator(new X509CredentialImplementation(
                             ssoAgentConfig.getSAML2().getSSOAgentX509Credential().getEntityCertificate()));
                     validator.validate(response.getSignature());
                 } catch (ValidationException e) {

@@ -23,11 +23,9 @@ import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentRequestResolver;
 import org.wso2.appserver.webapp.security.sso.bean.RelayState;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.util.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.SSOUtils;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -56,7 +54,12 @@ public class SAMLSSOValve extends SingleSignOn {
 
     public SAMLSSOValve() throws SSOException {
         getLogger().log(Level.INFO, "Initializing SAMLSSOValve...");
-        SSOUtils.loadSSOConfigurationProperties(getSSOSPConfigProperties());
+
+        Path ssoSPConfigFilePath = Paths.
+                get(SSOUtils.getCatalinaConfigurationHome().toString(),
+                        SSOConstants.SAMLSSOValveConstants.SSO_CONFIG_FILE_NAME);
+        //  Reads generic SSO ServiceProvider details, if sso-sp-config.properties file exists
+        SSOUtils.loadPropertiesFromFile(getSSOSPConfigProperties(), ssoSPConfigFilePath);
     }
 
     private static Logger getLogger() {
@@ -105,9 +108,9 @@ public class SAMLSSOValve extends SingleSignOn {
 
                 ssoAgentConfiguration.getSAML2().
                         setSSOAgentX509Credential(new SSOAgentX509Credential(getSSOSPConfigProperties()));
-                Optional.of(SSOUtils.generateIssuerID(request.getContextPath())).
+                Optional.of(SAMLSSOUtils.generateIssuerID(request.getContextPath())).
                         ifPresent(id -> ssoAgentConfiguration.getSAML2().setSPEntityId((String) id.get()));
-                Optional.of(SSOUtils.generateConsumerUrl(request.getContextPath(), getSSOSPConfigProperties())).
+                Optional.of(SAMLSSOUtils.generateConsumerUrl(request.getContextPath(), getSSOSPConfigProperties())).
                         ifPresent(url -> ssoAgentConfiguration.getSAML2().setACSURL((String) url.get()));
                 ssoAgentConfiguration.verifyConfig();
 
@@ -145,7 +148,9 @@ public class SAMLSSOValve extends SingleSignOn {
 
                 //  Reads the redirect path. This has to read before the session get invalidated as it first
                 //  tries to read the redirect path from the session attribute.
-                String redirectPath = readAndForgetRedirectPathAfterSLO(request);
+                String redirectPath = saml2SSOManager.
+                        readAndForgetRedirectPathAfterSLO(request, getSSOSPConfigProperties().
+                                        getProperty(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
 
                 saml2SSOManager.processResponse(request);
                 //  Redirect according to relay state attribute
@@ -188,7 +193,7 @@ public class SAMLSSOValve extends SingleSignOn {
                             isPresent()) {
                         ssoAgentConfiguration.getSAML2().setPassiveAuthn(false);
                         String htmlPayload = saml2SSOManager.buildPostRequest(request, true);
-                        SSOUtils.sendCharacterData(response, htmlPayload);
+                        saml2SSOManager.sendCharacterData(response, htmlPayload);
                     } else {
                         getLogger().log(Level.WARNING, "Attempt to logout from a already logout session.");
                         response.sendRedirect(request.getContext().getPath());
@@ -221,7 +226,7 @@ public class SAMLSSOValve extends SingleSignOn {
                 ssoAgentConfiguration.getSAML2().setPassiveAuthn(false);
                 if (requestResolver.isHttpPostBinding()) {
                     String htmlPayload = saml2SSOManager.buildPostRequest(request, false);
-                    SSOUtils.sendCharacterData(response, htmlPayload);
+                    saml2SSOManager.sendCharacterData(response, htmlPayload);
                 } else {
                     //  TODO: test redirect
                     response.sendRedirect(saml2SSOManager.buildRedirectRequest(request, false));
@@ -238,45 +243,5 @@ public class SAMLSSOValve extends SingleSignOn {
 
         //  Moves onto the next valve
         getNext().invoke(request, response);
-    }
-
-    /**
-     * Returns the redirect path after single-logout (SLO), read from the {@code request}.
-     * </p>
-     * If the redirect path is read from session then it is removed. Priority order of reading the redirect path is from
-     * the Session, Context and Config, respectively.
-     *
-     * @param request the HTTP servlet request
-     * @return redirect path relative to the current application path
-     */
-    private String readAndForgetRedirectPathAfterSLO(Request request) {
-        Optional<String> redirectPath = Optional.empty();
-        HttpSession session = request.getSession(false);
-
-        if (Optional.ofNullable(session).isPresent()) {
-            redirectPath = Optional.ofNullable(
-                    (String) session.getAttribute(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
-            session.removeAttribute(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO);
-        }
-
-        if (!redirectPath.isPresent()) {
-            redirectPath = Optional.ofNullable(
-                    request.getContext().findParameter(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
-        }
-
-        if (!redirectPath.isPresent()) {
-            redirectPath = Optional.ofNullable(
-                    getSSOSPConfigProperties().getProperty(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
-        }
-
-        if ((redirectPath.isPresent()) && (!redirectPath.get().isEmpty())) {
-            redirectPath = Optional.ofNullable(request.getContext().getPath().concat(redirectPath.get()));
-        } else {
-            redirectPath = Optional.ofNullable(request.getContext().getPath());
-        }
-
-        getLogger().log(Level.FINE, "Redirect path = " + redirectPath);
-
-        return redirectPath.get();
     }
 }
