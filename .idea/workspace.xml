@@ -2,18 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="90d17401-47b0-4966-aaae-28ae4bdd728b" name="Default" comment="">
-      <change type="MOVED" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentDataHolder.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentDataHolder.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/X509CredentialImpl.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/X509CredentialImplementation.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOUtils.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOUtils.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/LoggedInSessionBean.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/LoggedInSessionBean.java" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSignatureValidatorImplementation.java" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidator.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SignatureValidator.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentConfiguration.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentConfiguration.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SSOAgentX509Credential.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SSOAgentX509Credential.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOConstants.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOConstants.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/dictionaries/chiranga.xml" afterPath="$PROJECT_DIR$/.idea/dictionaries/chiranga.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/pom.xml" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/pom.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java" afterPath="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="webapp-management.iws" />
@@ -40,77 +35,13 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="SAMLSSOValve.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="154" column="41" selection-start-line="154" selection-start-column="41" selection-end-line="154" selection-end-column="41" />
-              <folding>
-                <element signature="e#0#12975#0" expanded="true" />
-                <element signature="imports" expanded="true" />
-                <element signature="e#2684#2685#0" expanded="true" />
-                <element signature="e#2728#2729#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SAML2SSOManager.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="SAML2SSOManager.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="440" column="34" selection-start-line="440" selection-start-column="34" selection-end-line="440" selection-end-column="34" />
+            <state vertical-scroll-proportion="0.56634307">
+              <caret line="522" column="17" selection-start-line="522" selection-start-column="17" selection-end-line="522" selection-end-column="17" />
               <folding>
-                <element signature="e#0#34372#0" expanded="true" />
-                <element signature="imports" expanded="true" />
-                <element signature="e#4020#4021#0" expanded="true" />
-                <element signature="e#4049#4050#0" expanded="true" />
-                <element signature="e#4254#4255#0" expanded="true" />
-                <element signature="e#4298#4299#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SAMLSSOUtils.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="410" column="50" selection-start-line="410" selection-start-column="40" selection-end-line="410" selection-end-column="50" />
-              <folding>
-                <element signature="e#0#24628#0" expanded="true" />
-                <element signature="imports" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SSOAgentDataHolder.java" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentDataHolder.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="2.0172415">
-              <caret line="27" column="0" selection-start-line="27" selection-start-column="0" selection-end-line="27" selection-end-column="0" />
-              <folding>
-                <element signature="e#1235#1236#0" expanded="true" />
-                <element signature="e#1264#1265#0" expanded="true" />
-                <element signature="e#1308#1309#0" expanded="true" />
-                <element signature="e#1344#1345#0" expanded="true" />
-                <element signature="e#1398#1399#0" expanded="true" />
-                <element signature="e#1429#1430#0" expanded="true" />
-                <element signature="e#1497#1498#0" expanded="true" />
-                <element signature="e#1551#1552#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="SSOUtils.java" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOUtils.java">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0">
-              <caret line="87" column="48" selection-start-line="87" selection-start-column="48" selection-end-line="87" selection-end-column="48" />
-              <folding>
-                <element signature="e#0#5849#0" expanded="true" />
+                <element signature="e#0#37078#0" expanded="true" />
                 <element signature="imports" expanded="true" />
               </folding>
             </state>
@@ -138,10 +69,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/agent/bean/SSOAgentConfiguration.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/SSOException.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/agent/util/XMLEntityResolver.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/valve/model/RelayState.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/agent/SSOAgentRequestResolver.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/valve/SSOValveConstants.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.mgt.identity.sso/src/main/java/org/wso2/appserver/webapp/mgt/identity/sso/agent/model/SSOAgentConfiguration.java" />
@@ -162,7 +89,6 @@
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentUtils.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/XMLEntityResolver.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentRequestResolver.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/model/LoggedInSessionBean.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/model/RelayState.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/model/SSOAgentX509CredentialHolder.java" />
@@ -171,7 +97,6 @@
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/model/SSOAgentConfiguration.java" />
         <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidator.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOAgentConfiguration.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/KeyStoreManager.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/pom.xml" />
@@ -182,13 +107,19 @@
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/X509CredentialImpl.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SSOAgentX509Credential.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/X509CredentialImplementation.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java" />
-        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/SSOUtils.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/DataHolder.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentDataHolder.java" />
         <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentDataHolder.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSignatureValidator.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSignatureValidatorImplementation.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SignatureValidator.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SignatureValidator.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java" />
+        <option value="$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java" />
       </list>
     </option>
   </component>
@@ -266,6 +197,9 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="Scratches" />
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -295,6 +229,24 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="org.wso2.appserver.webapp.security" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="webapp-management" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="webapp-management" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="org.wso2.appserver.webapp.security" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="target" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -466,9 +418,6 @@
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
-      <pane id="PackagesPane" />
-      <pane id="Scratches" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -493,9 +442,9 @@
     </key>
     <key name="MoveClassesOrPackagesDialog.RECENTS_KEY">
       <recent name="org.wso2.appserver.webapp.security.sso.util" />
+      <recent name="org.wso2.appserver.webapp.security.sso.saml" />
       <recent name="org.wso2.appserver.webapp.security.sso" />
       <recent name="org.wso2.appserver.webapp.security.sso.agent" />
-      <recent name="org.wso2.appserver.webapp.security.sso.saml" />
       <recent name="org.wso2.appserver.webapp.security.sso.model" />
     </key>
     <key name="CopyClassDialog.RECENTS_KEY">
@@ -707,7 +656,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="65" y="24" width="1301" height="744" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -717,22 +666,22 @@
       <window_info id="Application Servers" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32988048" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.77469134" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.77469134" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Designer" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.28605577" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.41512346" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.50617284" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Documentation" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" x="165" y="252" width="1101" height="544" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.41512346" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.50617284" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
   <component name="Vcs.Log.UiProperties">
@@ -757,7 +706,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java</url>
-          <line>102</line>
+          <line>101</line>
           <properties />
           <option name="timeStamp" value="15" />
         </line-breakpoint>
@@ -933,45 +882,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentRequestResolver.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="2.4708738">
-          <caret line="110" column="74" selection-start-line="110" selection-start-column="74" selection-end-line="110" selection-end-column="74" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.26213592">
-          <caret line="31" column="3" selection-start-line="31" selection-start-column="3" selection-end-line="31" selection-end-column="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/RelayState.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.5841424">
-          <caret line="39" column="0" selection-start-line="39" selection-start-column="0" selection-end-line="39" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://$MAVEN_REPOSITORY$/org/opensaml/xmltooling/1.4.4/xmltooling-1.4.4.jar!/org/opensaml/xml/signature/SignatureValidator.class">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-3.3793104">
           <caret line="24" column="14" selection-start-line="24" selection-start-column="14" selection-end-line="24" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidator.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="22" column="23" selection-start-line="22" selection-start-column="23" selection-end-line="22" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SAMLSignatureValidatorImpl.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="31" column="30" selection-start-line="31" selection-start-column="30" selection-end-line="31" selection-end-column="30" />
         </state>
       </provider>
     </entry>
@@ -987,7 +901,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.24448217">
           <caret line="11" column="28" selection-start-line="11" selection-start-column="28" selection-end-line="11" selection-end-column="28" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -995,7 +908,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.24448217">
           <caret line="8" column="28" selection-start-line="8" selection-start-column="28" selection-end-line="8" selection-end-column="28" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1003,7 +915,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.34974533">
           <caret line="39" column="34" selection-start-line="39" selection-start-column="34" selection-end-line="39" selection-end-column="34" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1011,10 +922,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3327674">
           <caret line="605" column="24" selection-start-line="605" selection-start-column="24" selection-end-line="605" selection-end-column="24" />
-          <folding>
-            <element signature="e#15618#15619#0" expanded="true" />
-            <element signature="e#15669#15670#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -1050,27 +957,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/XMLEntityResolver.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.34951457">
-          <caret line="30" column="23" selection-start-line="30" selection-start-column="23" selection-end-line="30" selection-end-column="23" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentConfiguration.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="47" column="39" selection-start-line="47" selection-start-column="39" selection-end-line="47" selection-end-column="39" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://$MAVEN_REPOSITORY$/org/opensaml/xmltooling/1.4.4/xmltooling-1.4.4.jar!/org/opensaml/xml/security/credential/Credential.class">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.12224109">
           <caret line="7" column="26" selection-start-line="7" selection-start-column="26" selection-end-line="7" selection-end-column="26" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1078,7 +968,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.15280136">
           <caret line="8" column="14" selection-start-line="8" selection-start-column="14" selection-end-line="8" selection-end-column="14" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1131,27 +1020,50 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33333334">
           <caret line="65" column="13" selection-start-line="65" selection-start-column="13" selection-end-line="65" selection-end-column="13" />
-          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentDataHolder.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="1.368932">
+          <caret line="55" column="0" selection-start-line="55" selection-start-column="0" selection-end-line="55" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#1555#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOValve.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="154" column="41" selection-start-line="154" selection-start-column="41" selection-end-line="154" selection-end-column="41" />
+          <caret line="34" column="38" selection-start-line="34" selection-start-column="38" selection-end-line="34" selection-end-column="38" />
           <folding>
-            <element signature="e#0#12975#0" expanded="true" />
+            <element signature="e#0#12936#0" expanded="true" />
             <element signature="imports" expanded="true" />
-            <element signature="e#2684#2685#0" expanded="true" />
-            <element signature="e#2728#2729#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/LoggedInSessionBean.java">
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/XMLEntityResolver.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.34951457">
+          <caret line="30" column="23" selection-start-line="30" selection-start-column="23" selection-end-line="30" selection-end-column="23" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSignatureValidatorImplementation.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.99029124">
+          <caret line="54" column="92" selection-start-line="54" selection-start-column="92" selection-end-line="54" selection-end-column="92" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SignatureValidator.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="242" column="20" selection-start-line="242" selection-start-column="20" selection-end-line="242" selection-end-column="20" />
+          <caret line="27" column="17" selection-start-line="27" selection-start-column="17" selection-end-line="27" selection-end-column="17" />
           <folding />
         </state>
       </provider>
@@ -1159,10 +1071,12 @@
     <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAMLSSOUtils.java">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="410" column="50" selection-start-line="410" selection-start-column="40" selection-end-line="410" selection-end-column="50" />
+          <caret line="222" column="22" selection-start-line="222" selection-start-column="22" selection-end-line="222" selection-end-column="22" />
           <folding>
-            <element signature="e#0#24628#0" expanded="true" />
+            <element signature="e#0#22667#0" expanded="true" />
             <element signature="imports" expanded="true" />
+            <element signature="e#4252#4253#0" expanded="true" />
+            <element signature="e#4308#4309#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -1178,34 +1092,56 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java">
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentConfiguration.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0">
-          <caret line="440" column="34" selection-start-line="440" selection-start-column="34" selection-end-line="440" selection-end-column="34" />
+        <state vertical-scroll-proportion="0.4935275">
+          <caret line="47" column="39" selection-start-line="47" selection-start-column="39" selection-end-line="47" selection-end-column="39" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentRequestResolver.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="2.5048544">
+          <caret line="110" column="74" selection-start-line="110" selection-start-column="74" selection-end-line="110" selection-end-column="74" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/agent/SSOAgentSessionManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="1.3106796">
+          <caret line="67" column="9" selection-start-line="67" selection-start-column="9" selection-end-line="67" selection-end-column="9" />
           <folding>
-            <element signature="e#0#34372#0" expanded="true" />
-            <element signature="imports" expanded="true" />
-            <element signature="e#4020#4021#0" expanded="true" />
-            <element signature="e#4049#4050#0" expanded="true" />
-            <element signature="e#4254#4255#0" expanded="true" />
-            <element signature="e#4298#4299#0" expanded="true" />
+            <element signature="e#1676#1677#0" expanded="true" />
+            <element signature="e#1713#1714#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/util/SSOAgentDataHolder.java">
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/RelayState.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="2.0172415">
-          <caret line="27" column="0" selection-start-line="27" selection-start-column="0" selection-end-line="27" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.5825243">
+          <caret line="39" column="0" selection-start-line="39" selection-start-column="0" selection-end-line="39" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/bean/LoggedInSessionBean.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="4.5728154">
+          <caret line="230" column="0" selection-start-line="230" selection-start-column="0" selection-end-line="230" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/org.wso2.appserver.webapp.security/src/main/java/org/wso2/appserver/webapp/security/sso/saml/SAML2SSOManager.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.56634307">
+          <caret line="522" column="17" selection-start-line="522" selection-start-column="17" selection-end-line="522" selection-end-column="17" />
           <folding>
-            <element signature="e#1235#1236#0" expanded="true" />
-            <element signature="e#1264#1265#0" expanded="true" />
-            <element signature="e#1308#1309#0" expanded="true" />
-            <element signature="e#1344#1345#0" expanded="true" />
-            <element signature="e#1398#1399#0" expanded="true" />
-            <element signature="e#1429#1430#0" expanded="true" />
-            <element signature="e#1497#1498#0" expanded="true" />
-            <element signature="e#1551#1552#0" expanded="true" />
+            <element signature="e#0#37078#0" expanded="true" />
+            <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>

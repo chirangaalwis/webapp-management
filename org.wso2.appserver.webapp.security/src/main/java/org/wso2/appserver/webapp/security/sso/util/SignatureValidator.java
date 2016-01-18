@@ -20,7 +20,20 @@ import org.opensaml.saml2.core.Response;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 
-public interface SAMLSignatureValidator {
-    void validateSignature(Response response, Assertion assertion, SSOAgentConfiguration ssoAgentConfig)
+/**
+ * This interface defines the common function(s) for an XML Signature validator.
+ *
+ * @since 6.0.0
+ */
+public interface SignatureValidator {
+    /**
+     * Validates an XML signature based on its content.
+     *
+     * @param response              a SAML 2.0 based Response
+     * @param assertion             a SAML 2.0 based Assertion
+     * @param ssoAgentConfiguration a {@link SSOAgentConfiguration} instance
+     * @throws SSOException if an error occurs during signature validation
+     */
+    void validateSignature(Response response, Assertion assertion, SSOAgentConfiguration ssoAgentConfiguration)
             throws SSOException;
 }

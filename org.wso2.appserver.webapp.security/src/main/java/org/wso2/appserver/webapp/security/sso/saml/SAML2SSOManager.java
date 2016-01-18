@@ -50,6 +50,7 @@ import org.opensaml.saml2.core.impl.SessionIndexBuilder;
 import org.opensaml.saml2.ecp.RelayState;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.util.Base64;
+import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.Element;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
@@ -58,6 +59,7 @@ import org.wso2.appserver.webapp.security.sso.agent.SSOAgentSessionManager;
 import org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.util.SignatureValidator;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -438,7 +440,7 @@ public class SAML2SSOManager {
 
         //  Validate signature
         //  TODO: changed
-        SAMLSSOUtils.validateSignature(getSSOAgentConfig(), saml2Response, assertion.get());
+        validateSignature(saml2Response, assertion.get());
 
         //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(SAMLSSOUtils.marshall(assertion.get()));
@@ -459,6 +461,93 @@ public class SAML2SSOManager {
         }
 
         request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
+    }
+
+    /**
+     * Returns true if the identity provider cannot authenticate the principal passively, as requested, else false.
+     *
+     * @param response the SAML 2.0 Response to be evaluated
+     * @return true if the identity provider cannot authenticate the principal passively, as requested, else false
+     */
+    private boolean isNoPassive(Response response) {
+        return (Optional.ofNullable(response.getStatus()).isPresent()) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getValue().equals(StatusCode.RESPONDER_URI)) &&
+                (Optional.ofNullable(response.getStatus().getStatusCode().getStatusCode()).isPresent()) &&
+                (response.getStatus().getStatusCode().getStatusCode().getValue().equals(StatusCode.NO_PASSIVE_URI));
+    }
+
+    /**
+     * Validates the SAML 2.0 Audience Restrictions set in the specified SAML 2.0 Assertion.
+     *
+     * @param assertion the SAML 2.0 Assertion in which Audience Restrictions' validity is checked for
+     * @throws SSOException if the Audience Restriction validation fails
+     */
+    private void validateAudienceRestriction(Assertion assertion) throws SSOException {
+        if (!Optional.ofNullable(assertion).isPresent()) {
+            return;
+        }
+
+        Conditions conditions = assertion.getConditions();
+        if (!Optional.ofNullable(conditions).isPresent()) {
+            throw new SSOException("SAML2 Response doesn't contain Conditions.");
+        }
+
+        List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
+        if ((!Optional.ofNullable(audienceRestrictions).isPresent()) || (audienceRestrictions.isEmpty())) {
+            throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions.");
+        }
+
+        Stream<AudienceRestriction> audienceExistingStream = audienceRestrictions.stream().filter(audienceRestriction ->
+                (((Optional.ofNullable(audienceRestriction.getAudiences()).isPresent()) && (!audienceRestriction.
+                        getAudiences().isEmpty()))) && (audienceRestriction.getAudiences().stream().
+                        filter(audience -> getSSOAgentConfig().getSAML2().getSPEntityId().
+                                equals(audience.getAudienceURI()))).count() > 0);
+
+        if (audienceExistingStream.count() == 0) {
+            throw new SSOException("SAML2 Assertion Audience Restriction validation failed.");
+        }
+    }
+
+    private void validateSignature(Response response, Assertion assertion) throws SSOException {
+        if (Optional.ofNullable(SSOAgentDataHolder.getInstance().getObject()).isPresent()) {
+            //  Custom implementation of signature validation
+            SignatureValidator signatureValidatorUtility = (SignatureValidator) SSOAgentDataHolder.
+                    getInstance().getObject();
+            signatureValidatorUtility.validateSignature(response, assertion, getSSOAgentConfig());
+        } else {
+            //  If custom implementation not found, execute the default implementation
+            if (getSSOAgentConfig().getSAML2().isResponseSigned()) {
+                if (!Optional.ofNullable(response.getSignature()).isPresent()) {
+                    throw new SSOException("SAML2 Response signing is enabled, but signature element not " +
+                            "found in SAML2 Response element.");
+                } else {
+                    try {
+                        org.opensaml.xml.signature.SignatureValidator validator = new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
+                                getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                        validator.validate(response.getSignature());
+                    } catch (ValidationException e) {
+                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        throw new SSOException("Signature validation failed for SAML2 Response.");
+                    }
+                }
+            }
+            if (getSSOAgentConfig().getSAML2().isAssertionSigned()) {
+                if (!Optional.ofNullable(assertion.getSignature()).isPresent()) {
+                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not " +
+                            "found in SAML2 Assertion element.");
+                } else {
+                    try {
+                        org.opensaml.xml.signature.SignatureValidator validator = new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
+                                getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                        validator.validate(assertion.getSignature());
+                    } catch (ValidationException e) {
+                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        throw new SSOException("Signature validation failed for SAML2 Assertion.");
+                    }
+                }
+            }
+        }
     }
 
 
@@ -602,52 +691,6 @@ public class SAML2SSOManager {
         logoutRequest.setReason("Single Logout");
 
         return logoutRequest;
-    }
-
-    /**
-     * Returns true if the identity provider cannot authenticate the principal passively, as requested, else false.
-     *
-     * @param response the SAML 2.0 Response to be evaluated
-     * @return true if the identity provider cannot authenticate the principal passively, as requested, else false
-     */
-    private boolean isNoPassive(Response response) {
-        return (Optional.ofNullable(response.getStatus()).isPresent()) &&
-                (Optional.ofNullable(response.getStatus().getStatusCode()).isPresent()) &&
-                (response.getStatus().getStatusCode().getValue().equals(StatusCode.RESPONDER_URI)) &&
-                (Optional.ofNullable(response.getStatus().getStatusCode().getStatusCode()).isPresent()) &&
-                (response.getStatus().getStatusCode().getStatusCode().getValue().equals(StatusCode.NO_PASSIVE_URI));
-    }
-
-    /**
-     * Validates the SAML 2.0 Audience Restrictions set in the specified SAML 2.0 Assertion.
-     *
-     * @param assertion the SAML 2.0 Assertion in which Audience Restrictions' validity is checked for
-     * @throws SSOException if the Audience Restriction validation fails
-     */
-    private void validateAudienceRestriction(Assertion assertion) throws SSOException {
-        if (!Optional.ofNullable(assertion).isPresent()) {
-            return;
-        }
-
-        Conditions conditions = assertion.getConditions();
-        if (!Optional.ofNullable(conditions).isPresent()) {
-            throw new SSOException("SAML2 Response doesn't contain Conditions.");
-        }
-
-        List<AudienceRestriction> audienceRestrictions = conditions.getAudienceRestrictions();
-        if ((!Optional.ofNullable(audienceRestrictions).isPresent()) || (audienceRestrictions.isEmpty())) {
-            throw new SSOException("SAML2 Response doesn't contain AudienceRestrictions.");
-        }
-
-        Stream<AudienceRestriction> audienceExistingStream = audienceRestrictions.stream().filter(audienceRestriction ->
-                (((Optional.ofNullable(audienceRestriction.getAudiences()).isPresent()) && (!audienceRestriction.
-                        getAudiences().isEmpty()))) && (audienceRestriction.getAudiences().stream().
-                        filter(audience -> getSSOAgentConfig().getSAML2().getSPEntityId().
-                                equals(audience.getAudienceURI()))).count() > 0);
-
-        if (audienceExistingStream.count() == 0) {
-            throw new SSOException("SAML2 Assertion Audience Restriction validation failed.");
-        }
     }
 
     /**

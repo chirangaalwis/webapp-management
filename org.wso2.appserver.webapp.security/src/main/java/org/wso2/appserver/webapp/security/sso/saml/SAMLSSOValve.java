@@ -33,7 +33,6 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpSession;
 
 /**
  * This class implements an Apache Tomcat valve, which performs SAML 2.0 based single-sign-on (SSO) function.

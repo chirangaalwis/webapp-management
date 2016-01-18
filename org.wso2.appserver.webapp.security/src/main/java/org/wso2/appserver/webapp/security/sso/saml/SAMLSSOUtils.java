@@ -20,22 +20,34 @@ import org.apache.xml.security.c14n.Canonicalizer;
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.*;
+import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.core.AuthnRequest;
+import org.opensaml.saml2.core.EncryptedAssertion;
+import org.opensaml.saml2.core.LogoutRequest;
+import org.opensaml.saml2.core.RequestAbstractType;
 import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilder;
 import org.opensaml.xml.encryption.EncryptedKey;
-import org.opensaml.xml.io.*;
+import org.opensaml.xml.io.Marshaller;
+import org.opensaml.xml.io.MarshallerFactory;
+import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.io.Unmarshaller;
+import org.opensaml.xml.io.UnmarshallerFactory;
+import org.opensaml.xml.io.UnmarshallingException;
 import org.opensaml.xml.security.SecurityHelper;
 import org.opensaml.xml.security.credential.Credential;
 import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
 import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
 import org.opensaml.xml.security.x509.X509Credential;
-import org.opensaml.xml.signature.*;
+import org.opensaml.xml.signature.KeyInfo;
+import org.opensaml.xml.signature.Signature;
+import org.opensaml.xml.signature.Signer;
+import org.opensaml.xml.signature.X509Certificate;
+import org.opensaml.xml.signature.X509Data;
 import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.util.XMLHelper;
-import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.bootstrap.DOMImplementationRegistry;
@@ -45,9 +57,6 @@ import org.w3c.dom.ls.LSSerializer;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
-import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.util.SSOAgentDataHolder;
-import org.wso2.appserver.webapp.security.sso.util.SAMLSignatureValidator;
 import org.wso2.appserver.webapp.security.sso.util.XMLEntityResolver;
 import org.xml.sax.SAXException;
 
@@ -56,7 +65,11 @@ import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -214,7 +227,7 @@ public class SAMLSSOUtils {
      * representation
      * @throws SSOException if an error occurs during the marshalling process
      */
-    protected static String marshall(XMLObject xmlObject) throws SSOException {
+    public static String marshall(XMLObject xmlObject) throws SSOException {
         try {
             //  Explicitly sets the special XML parser library to be used, in the global variables
             System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
@@ -242,7 +255,7 @@ public class SAMLSSOUtils {
      * @return an XML object from the {@link String} value representing the XML syntax
      * @throws SSOException if an error occurs when unmarshalling the XML string representation
      */
-    protected static XMLObject unmarshall(String xmlString) throws SSOException {
+    public static XMLObject unmarshall(String xmlString) throws SSOException {
         doBootstrap();
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setExpandEntityReferences(false);
@@ -405,46 +418,6 @@ public class SAMLSSOUtils {
                 objectQualifiedName.getPrefix());
     }
 
-    //  TODO: TO BE REFACTORED AND COMMENTED
-    protected static void validateSignature(SSOAgentConfiguration ssoAgentConfig, Response response, Assertion assertion) throws SSOException {
-
-        if (Optional.ofNullable(SSOAgentDataHolder.getInstance().getObject()).isPresent()) {
-            //Custom implementation of signature validation
-            SAMLSignatureValidator signatureValidatorUtility = (SAMLSignatureValidator) SSOAgentDataHolder
-                    .getInstance().getObject();
-            signatureValidatorUtility.validateSignature(response, assertion, ssoAgentConfig);
-        } else {
-            //If custom implementation not found, Execute the default implementation
-            if (ssoAgentConfig.getSAML2().isResponseSigned()) {
-                if (response.getSignature() == null) {
-                    throw new SSOException("SAML2 Response signing is enabled, but signature element not found in SAML2 Response element");
-                } else {
-                    try {
-                        SignatureValidator validator = new SignatureValidator(
-                                new X509CredentialImplementation(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
-                        validator.validate(response.getSignature());
-                    } catch (ValidationException e) {
-                        getLogger().log(Level.FINE, "Validation exception : ", e);
-                        throw new SSOException("Signature validation failed for SAML2 Response");
-                    }
-                }
-            }
-            if (ssoAgentConfig.getSAML2().isAssertionSigned()) {
-                if (assertion.getSignature() == null) {
-                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not found in SAML2 Assertion element");
-                } else {
-                    try {
-                        SignatureValidator validator = new SignatureValidator(
-                                new X509CredentialImplementation(ssoAgentConfig.getSAML2().getSSOAgentX509Credential()));
-                        validator.validate(assertion.getSignature());
-                    } catch (ValidationException e) {
-                        getLogger().log(Level.FINE, "Validation exception : ", e);
-                        throw new SSOException("Signature validation failed for SAML2 Assertion");
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Utility functions for handling digital signature application and validation.

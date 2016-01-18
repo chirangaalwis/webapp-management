@@ -48,7 +48,13 @@ public class SSOAgentSessionManager {
         return ssoSessionsMap;
     }
 
-    //  TODO: JAVADOC COMMENTS
+    /**
+     * Invalidates all the sessions associated with the session index corresponding to the specified {@code HttpSession}
+     * from the global single-sign-on (SSO) agent session manager map.
+     *
+     * @param session the {@link HttpSession} instance
+     * @return set of sessions associated with the session index
+     */
     public static Set<HttpSession> invalidateAllSessions(HttpSession session) {
         LoggedInSessionBean sessionBean = (LoggedInSessionBean) session.
                 getAttribute(SSOConstants.SESSION_BEAN_NAME);
