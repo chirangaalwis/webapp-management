@@ -21,17 +21,17 @@ import org.opensaml.xml.security.credential.UsageType;
 import org.opensaml.xml.security.x509.X509Credential;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 
-import javax.crypto.SecretKey;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509CRL;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
+import javax.crypto.SecretKey;
 
 /**
  * This class represents an entity credential associated with X.509 Public Key Infrastructure.
- * </p>
+ * <p>
  * This class implements the org.opensaml.xml.security.x509.X509Credential interface.
  *
  * @since 6.0.0

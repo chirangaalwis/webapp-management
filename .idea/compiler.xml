@@ -43,7 +43,7 @@
       <module name="org.wso2.appserver.webapp.authenticator" target="1.8" />
       <module name="org.wso2.appserver.webapp.mgt.identity.sso" target="1.8" />
       <module name="org.wso2.appserver.webapp.security" target="1.8" />
-      <module name="webapp-management" target="1.5" />
+      <module name="webapp-management" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

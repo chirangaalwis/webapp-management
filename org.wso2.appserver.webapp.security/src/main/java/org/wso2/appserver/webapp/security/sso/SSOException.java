@@ -19,7 +19,7 @@ import javax.servlet.ServletException;
 
 /**
  * This class defines a custom exception type which is used within the implementation of the single-sign-on (SSO).
- * </p>
+ * <p>
  * This class extends the {@code javax.servlet.ServletException} class.
  *
  * @since 6.0.0

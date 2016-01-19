@@ -17,7 +17,6 @@ package org.wso2.appserver.webapp.security.sso;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,7 +28,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * This class contains general utility functions used within the org.wso2.appserver.webapp.security.sso.
@@ -79,19 +77,19 @@ public class SSOUtils {
      *
      * @param properties the {@link Properties} structure to which the file content is to be loaded
      * @param filePath   the {@link Path} to the file from which properties are to be loaded
-     * @throws SSOException if an error occurs during the loading of the file content or if the sso-sp-config.properties
-     *                      file cannot be found
+     * @throws SSOException if an error occurs during the loading of the file content or if the specified file cannot
+     *                      be found
      */
     public static void loadPropertiesFromFile(Properties properties, Path filePath) throws SSOException {
         if (Files.exists(filePath)) {
             try (InputStream fileInputStream = Files.newInputStream(filePath)) {
                 properties.load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded the properties from the file.");
+                getLogger().log(Level.INFO, "Successfully loaded the properties from the file");
             } catch (IOException e) {
                 throw new SSOException("Error when loading properties from the specified file " + filePath);
             }
         } else {
-            throw new SSOException("File specified by " + filePath + " does not exist.");
+            throw new SSOException("File specified by " + filePath + " does not exist");
         }
     }
 

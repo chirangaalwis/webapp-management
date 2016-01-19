@@ -54,11 +54,11 @@ import org.opensaml.xml.validation.ValidationException;
 import org.w3c.dom.Element;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
-import org.wso2.appserver.webapp.security.sso.util.SSOAgentDataHolder;
+import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentSessionManager;
 import org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean;
-import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.util.SSOAgentDataHolder;
 import org.wso2.appserver.webapp.security.sso.util.SignatureValidator;
 
 import java.io.IOException;
@@ -296,7 +296,7 @@ public class SAML2SSOManager {
 
     /**
      * Returns the redirect path after single-logout (SLO), read from the {@code request}.
-     * </p>
+     * <p>
      * If the redirect path is read from session then it is removed. Priority order of reading the redirect path is from
      * the Session, Context and Config, respectively.
      *
@@ -390,9 +390,9 @@ public class SAML2SSOManager {
             if (!SSOUtils.isCollectionEmpty(encryptedAssertions)) {
                 encryptedAssertion = encryptedAssertions.stream().findFirst().get();
                 try {
-                    assertion = Optional.ofNullable(
-                            SAMLSSOUtils.decryptAssertion(getSSOAgentConfig().getSAML2().getSSOAgentX509Credential(),
-                                    encryptedAssertion));
+                    assertion = Optional.ofNullable(SAMLSSOUtils
+                                    .decryptAssertion(getSSOAgentConfig().getSAML2().getSSOAgentX509Credential(),
+                                            encryptedAssertion));
                 } catch (Exception e) {
                     getLogger().log(Level.FINE, "Assertion decryption failure : ", e);
                     throw new SSOException("Unable to decrypt the SAML2 Assertion.");
@@ -423,8 +423,8 @@ public class SAML2SSOManager {
 
         //  Gets the subject name from the Response Object and forward it to login_action.jsp
         Optional<String> subject = Optional.empty();
-        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) &&
-                (Optional.ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
+        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional
+                .ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
             subject = Optional.of(assertion.get().getSubject().getNameID().getValue());
         }
         if (!subject.isPresent()) {
@@ -519,12 +519,13 @@ public class SAML2SSOManager {
             //  If custom implementation not found, execute the default implementation
             if (getSSOAgentConfig().getSAML2().isResponseSigned()) {
                 if (!Optional.ofNullable(response.getSignature()).isPresent()) {
-                    throw new SSOException("SAML2 Response signing is enabled, but signature element not " +
-                            "found in SAML2 Response element.");
+                    throw new SSOException("SAML2 Response signing is enabled, but signature element not "
+                            + "found in SAML2 Response element.");
                 } else {
                     try {
-                        org.opensaml.xml.signature.SignatureValidator validator = new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                        org.opensaml.xml.signature.SignatureValidator validator =
+                                new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
+                                        getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
                         validator.validate(response.getSignature());
                     } catch (ValidationException e) {
                         getLogger().log(Level.FINE, "Validation exception : ", e);
@@ -534,12 +535,13 @@ public class SAML2SSOManager {
             }
             if (getSSOAgentConfig().getSAML2().isAssertionSigned()) {
                 if (!Optional.ofNullable(assertion.getSignature()).isPresent()) {
-                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not " +
-                            "found in SAML2 Assertion element.");
+                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not "
+                            + "found in SAML2 Assertion element.");
                 } else {
                     try {
-                        org.opensaml.xml.signature.SignatureValidator validator = new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                        org.opensaml.xml.signature.SignatureValidator validator =
+                                new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
+                                        getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
                         validator.validate(assertion.getSignature());
                     } catch (ValidationException e) {
                         getLogger().log(Level.FINE, "Validation exception : ", e);
@@ -549,11 +551,6 @@ public class SAML2SSOManager {
             }
         }
     }
-
-
-
-
-
 
     //  TODO: WRITE JAVADOCS AND TEST
     public String buildRedirectRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
@@ -591,12 +588,13 @@ public class SAML2SSOManager {
         if ((Optional.ofNullable(getSSOAgentConfig().getQueryParameters()).isPresent()) && (!getSSOAgentConfig().
                 getQueryParameters().isEmpty())) {
             StringBuilder builder = new StringBuilder();
-            getSSOAgentConfig().getQueryParameters().entrySet().stream().filter(entry ->
-                    ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.ofNullable(entry.getValue()).
-                            isPresent()) && (entry.getValue().length > 0))).
-                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).forEach(
-                            parameter -> builder.append("&").append(filteredEntry.getKey()).
-                                    append("=").append(parameter)));
+            getSSOAgentConfig().getQueryParameters().entrySet().stream().
+                    filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
+                            ofNullable(entry.getValue()).
+                                    isPresent()) && (entry.getValue().length > 0))).
+                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
+                            forEach(parameter -> builder.append("&").append(filteredEntry.getKey()).
+                                            append("=").append(parameter)));
             httpQueryString.append(builder);
         }
 
@@ -701,11 +699,11 @@ public class SAML2SSOManager {
      */
     private Map<String, String> getAssertionStatements(Assertion assertion) {
         Map<String, String> results = new HashMap<>();
-        if ((Optional.ofNullable(assertion).isPresent()) &&
-                (Optional.ofNullable(assertion.getAttributeStatements()).isPresent())) {
+        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements())
+                .isPresent())) {
             Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
-            attributeStatements.forEach(attributeStatement ->
-                    attributeStatement.getAttributes().stream().forEach(attribute -> {
+            attributeStatements.
+                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
                         Element value = attribute.getAttributeValues().get(0).getDOM();
                         String attributeValue = value.getTextContent();
                         results.put(attribute.getName(), attributeValue);

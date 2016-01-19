@@ -29,6 +29,7 @@ import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilder;
+import org.opensaml.xml.encryption.DecryptionException;
 import org.opensaml.xml.encryption.EncryptedKey;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
@@ -43,6 +44,7 @@ import org.opensaml.xml.security.keyinfo.StaticKeyInfoCredentialResolver;
 import org.opensaml.xml.security.x509.X509Credential;
 import org.opensaml.xml.signature.KeyInfo;
 import org.opensaml.xml.signature.Signature;
+import org.opensaml.xml.signature.SignatureException;
 import org.opensaml.xml.signature.Signer;
 import org.opensaml.xml.signature.X509Certificate;
 import org.opensaml.xml.signature.X509Data;
@@ -60,15 +62,10 @@ import org.wso2.appserver.webapp.security.sso.SSOUtils;
 import org.wso2.appserver.webapp.security.sso.util.XMLEntityResolver;
 import org.xml.sax.SAXException;
 
-import javax.crypto.SecretKey;
-import javax.xml.namespace.QName;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -88,6 +85,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
+import javax.crypto.SecretKey;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * This class defines the implementation of utility functions associated with SAML 2.0 based
@@ -113,7 +115,7 @@ public class SAMLSSOUtils {
 
     /**
      * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
-     * </p>
+     * <p>
      * An {@code Optional String} id is returned based on the context path provided.
      *
      * @param contextPath the context path of the service provider application
@@ -133,7 +135,7 @@ public class SAMLSSOUtils {
 
     /**
      * Returns a SAML 2.0 Assertion Consumer URL based on service provider application context path.
-     * </p>
+     * <p>
      * An {@code Optional String} URL is returned based on the context path and configuration properties provided.
      *
      * @param contextPath           the context path of the service provider application
@@ -153,7 +155,7 @@ public class SAMLSSOUtils {
 
     /**
      * Initializes the OpenSAML2 library, if it is not initialized yet.
-     * </p>
+     * <p>
      * Calls the bootstrap method of {@code DefaultBootstrap}.
      *
      * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
@@ -297,9 +299,8 @@ public class SAMLSSOUtils {
             decrypter = new Decrypter(new StaticKeyInfoCredentialResolver(shared), null, null);
             decrypter.setRootInNewDocument(true);
             return decrypter.decrypt(encryptedAssertion);
-        } catch (Exception e) {
+        } catch (DecryptionException e) {
             throw new SSOException("Decrypted assertion error.", e);
-
         }
     }
 
@@ -333,7 +334,7 @@ public class SAMLSSOUtils {
             //  Signs the XML Objects based on the given order of the Signature list
             Signer.signObjects(signatureList);
             return authnRequest;
-        } catch (Exception e) {
+        } catch (MarshallingException | SignatureException e) {
             throw new SSOException("Error while signing the SAML 2.0 AuthnRequest message.", e);
         }
     }
@@ -367,7 +368,7 @@ public class SAMLSSOUtils {
             //  Signs the XML Objects based on the given order of the Signature list
             Signer.signObjects(signatureList);
             return logoutRequest;
-        } catch (Exception e) {
+        } catch (MarshallingException | SignatureException e) {
             throw new SSOException("Error while signing the SAML 2.0 based LogoutRequest message.", e);
         }
     }

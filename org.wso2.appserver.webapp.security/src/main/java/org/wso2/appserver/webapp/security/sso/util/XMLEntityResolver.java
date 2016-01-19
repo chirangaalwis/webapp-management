@@ -23,7 +23,7 @@ import java.io.IOException;
 
 /**
  * A custom implementation for resolving external XML entities.
- * </p>
+ * <p>
  * This class implements the {@code org.xml.sax.EntityResolver} interface.
  *
  * @since 6.0.0

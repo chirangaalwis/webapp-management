@@ -20,10 +20,10 @@ import org.apache.catalina.connector.Request;
 import org.apache.catalina.connector.Response;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentRequestResolver;
 import org.wso2.appserver.webapp.security.sso.bean.RelayState;
-import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
-import org.wso2.appserver.webapp.security.sso.SSOUtils;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -36,7 +36,7 @@ import javax.servlet.ServletException;
 
 /**
  * This class implements an Apache Tomcat valve, which performs SAML 2.0 based single-sign-on (SSO) function.
- * </p>
+ * <p>
  * This is a sub-class of the {@code org.apache.catalina.authenticator.SingleSignOn} class.
  *
  * @since 6.0.0
@@ -75,7 +75,7 @@ public class SAMLSSOValve extends SingleSignOn {
 
     /**
      * Performs single-sign-on (SSO) processing for this request using SAML 2.0 protocol.
-     * </p>
+     * <p>
      * This method overrides the parent {@link SingleSignOn} class' invoke() method.
      *
      * @param request  the servlet request processed
@@ -85,12 +85,12 @@ public class SAMLSSOValve extends SingleSignOn {
      */
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
-        getLogger().log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI() + ".");
+        getLogger().log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
 
         //  Checks if SAML 2.0 single-sign-on valve is enabled in the context-param
         if (!(Boolean.parseBoolean(
                 request.getContext().findParameter(SSOConstants.SAMLSSOValveConstants.ENABLE_SAML2_SSO)))) {
-            getLogger().log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName() + ".");
+            getLogger().log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
             //  Moves onto the next valve, if SAML2 SSO valve is not enabled
             getNext().invoke(request, response);
             return;

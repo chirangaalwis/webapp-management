@@ -18,8 +18,8 @@ package org.wso2.appserver.webapp.security.sso.agent;
 import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
-import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
 
 import java.util.ArrayList;
 import java.util.HashMap;

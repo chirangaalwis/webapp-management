@@ -38,27 +38,47 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.compiler.plugin.version}</version>
-                    <configuration>
-                        <encoding>UTF-8</encoding>
-                        <source>1.8</source>
-                        <target>1.8</target>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>${maven.jar.plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
                     <version>${maven.shade.plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>jar-no-fork</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <id>docs</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>javadoc</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
-        <!--<plugins>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <source>${wso2.appserver.maven.compiler.source}</source>
+                    <target>${wso2.appserver.maven.compiler.target}</target>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
@@ -69,7 +89,7 @@
                 <artifactId>findbugs-maven-plugin</artifactId>
                 <version>${maven.findbugsplugin.version}</version>
             </plugin>
-        </plugins>-->
+        </plugins>
     </build>
 
     <dependencyManagement>
@@ -116,11 +136,12 @@
         <xerces.xercesImpl.version>2.11.0</xerces.xercesImpl.version>
 
         <!-- plugin version properties -->
-        <maven.compiler.plugin.version>3.3</maven.compiler.plugin.version>
-        <maven.jar.plugin.version>2.6</maven.jar.plugin.version>
         <maven.shade.plugin.version>2.4.2</maven.shade.plugin.version>
         <maven.checkstyleplugin.version>2.17</maven.checkstyleplugin.version>
         <maven.findbugsplugin.version>3.0.3</maven.findbugsplugin.version>
+
+        <wso2.appserver.maven.compiler.source>1.8</wso2.appserver.maven.compiler.source>
+        <wso2.appserver.maven.compiler.target>1.8</wso2.appserver.maven.compiler.target>
     </properties>
 
 </project>

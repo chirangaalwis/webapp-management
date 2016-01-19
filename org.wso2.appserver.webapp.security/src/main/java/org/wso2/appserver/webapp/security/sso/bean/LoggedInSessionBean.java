@@ -209,7 +209,7 @@ public class LoggedInSessionBean implements Serializable {
 
         /**
          * Writes this {@code LoggedInSessionBean} instance to the specified {@code ObjectOutputStream}.
-         * </p>
+         * <p>
          * This is the default {@code writeObject} method executed during the serialization process of this instance.
          *
          * @param stream the {@link java.io.ObjectOutputStream} to which this LoggedInSessionBean instance is to be
@@ -231,7 +231,7 @@ public class LoggedInSessionBean implements Serializable {
 
         /**
          * Reads this {@code LoggedInSessionBean} instance to the specified {@code ObjectInputStream}.
-         * </p>
+         * <p>
          * This is the default {@code readObject} method executed during the deSerialization process of this instance.
          *
          * @param stream the serialized {@link java.io.ObjectInputStream} from which the LoggedInSessionBean instance is
