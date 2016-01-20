@@ -284,7 +284,7 @@ public class SAMLSSOUtils {
      * @return a decrypted SAML 2.0 {@link Assertion} from the specified SAML 2.0 {@link EncryptedAssertion}
      * @throws SSOException if an error occurs during the decryption process
      */
-    protected static Assertion decryptAssertion(SSOAgentX509Credential ssoAgentX509Credential,
+    protected static Assertion decryptAssertion(SSOX509Credential ssoAgentX509Credential,
             EncryptedAssertion encryptedAssertion) throws SSOException {
         try {
             KeyInfoCredentialResolver keyResolver = new StaticKeyInfoCredentialResolver(

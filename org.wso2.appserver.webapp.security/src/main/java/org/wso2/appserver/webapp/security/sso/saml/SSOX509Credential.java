@@ -33,12 +33,12 @@ import java.util.Properties;
  *
  * @since 6.0.0
  */
-public class SSOAgentX509Credential {
+public class SSOX509Credential {
     private PublicKey publicKey;
     private PrivateKey privateKey;
     private X509Certificate entityCertificate;
 
-    public SSOAgentX509Credential(Properties keyStoreConfigurationProperties) throws SSOException {
+    public SSOX509Credential(Properties keyStoreConfigurationProperties) throws SSOException {
         readX509Credentials(keyStoreConfigurationProperties);
     }
 
@@ -97,7 +97,7 @@ public class SSOAgentX509Credential {
                             getKey(privateKeyAlias.get(), privateKeyPassword.get().toCharArray()));
                 }
             } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-                throw new SSOException("Error occurred while retrieving the private key.");
+                throw new SSOException("Error occurred while retrieving the private key");
             }
             setPublicKey(getEntityCertificate().getPublicKey());
         }

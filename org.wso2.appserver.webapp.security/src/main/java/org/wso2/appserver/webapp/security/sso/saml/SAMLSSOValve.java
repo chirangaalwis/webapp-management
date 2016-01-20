@@ -106,7 +106,7 @@ public class SAMLSSOValve extends SingleSignOn {
                 ssoAgentConfiguration.initConfig(getSSOSPConfigProperties());
 
                 ssoAgentConfiguration.getSAML2().
-                        setSSOAgentX509Credential(new SSOAgentX509Credential(getSSOSPConfigProperties()));
+                        setSSOAgentX509Credential(new SSOX509Credential(getSSOSPConfigProperties()));
                 Optional.of(SAMLSSOUtils.generateIssuerID(request.getContextPath())).
                         ifPresent(id -> ssoAgentConfiguration.getSAML2().setSPEntityId((String) id.get()));
                 Optional.of(SAMLSSOUtils.generateConsumerUrl(request.getContextPath(), getSSOSPConfigProperties())).
@@ -116,7 +116,7 @@ public class SAMLSSOValve extends SingleSignOn {
                 request.getSessionInternal().
                         setNote(SSOConstants.SAMLSSOValveConstants.SSO_AGENT_CONFIG, ssoAgentConfiguration);
             } catch (SSOException e) {
-                getLogger().log(Level.SEVERE, "Error on initializing SAML2SSOManager.", e);
+                getLogger().log(Level.SEVERE, "Error on initializing SAML2SSOManager", e);
                 return;
             }
         } else {
@@ -146,7 +146,7 @@ public class SAMLSSOValve extends SingleSignOn {
                 saml2SSOManager = new SAML2SSOManager(ssoAgentConfiguration);
 
                 //  Reads the redirect path. This has to read before the session get invalidated as it first
-                //  tries to read the redirect path from the session attribute.
+                //  tries to read the redirect path from the session attribute
                 String redirectPath = saml2SSOManager.
                         readAndForgetRedirectPathAfterSLO(request, getSSOSPConfigProperties().
                                         getProperty(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));

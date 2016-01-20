@@ -19,7 +19,7 @@ import org.opensaml.common.xml.SAMLConstants;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
-import org.wso2.appserver.webapp.security.sso.saml.SSOAgentX509Credential;
+import org.wso2.appserver.webapp.security.sso.saml.SSOX509Credential;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -365,7 +365,7 @@ public class SSOAgentConfiguration {
                         getSAML2().isRequestSigned()) &&
                 (!Optional.ofNullable(getSAML2().getSSOAgentX509Credential()).isPresent())) {
             getLogger().log(Level.FINE,
-                    "\'SSOAgentX509Credential\' not configured. Defaulting to " + SSOAgentX509Credential.class
+                    "\'SSOX509Credential\' not configured. Defaulting to " + SSOX509Credential.class
                             .getName());
         }
 
@@ -409,7 +409,7 @@ public class SSOAgentConfiguration {
         private Boolean isSLOEnabled;
         private String sloURL;
         private String attributeConsumingServiceIndex;
-        private SSOAgentX509Credential ssoAgentX509Credential;
+        private SSOX509Credential ssoX509Credential;
         private Boolean isAssertionSigned;
         private Boolean isAssertionEncrypted;
         private Boolean isResponseSigned;
@@ -494,12 +494,12 @@ public class SSOAgentConfiguration {
             this.attributeConsumingServiceIndex = attributeConsumingServiceIndex;
         }
 
-        public SSOAgentX509Credential getSSOAgentX509Credential() {
-            return ssoAgentX509Credential;
+        public SSOX509Credential getSSOAgentX509Credential() {
+            return ssoX509Credential;
         }
 
-        public void setSSOAgentX509Credential(SSOAgentX509Credential ssoAgentX509Credential) {
-            this.ssoAgentX509Credential = ssoAgentX509Credential;
+        public void setSSOAgentX509Credential(SSOX509Credential ssoAgentX509Credential) {
+            this.ssoX509Credential = ssoAgentX509Credential;
         }
 
         public Boolean isAssertionSigned() {

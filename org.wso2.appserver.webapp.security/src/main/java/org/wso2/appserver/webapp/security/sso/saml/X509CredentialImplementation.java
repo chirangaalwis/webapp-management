@@ -46,7 +46,7 @@ public class X509CredentialImplementation implements X509Credential {
         setEntityCertificate(certificate);
     }
 
-    public X509CredentialImplementation(SSOAgentX509Credential credential) throws SSOException {
+    public X509CredentialImplementation(SSOX509Credential credential) throws SSOException {
         setPublicKey(credential.getPublicKey());
         setEntityCertificate(credential.getEntityCertificate());
         setPrivateKey(credential.getPrivateKey());

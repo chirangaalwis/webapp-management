@@ -552,60 +552,25 @@ public class SAML2SSOManager {
         }
     }
 
-    //  TODO: WRITE JAVADOCS AND TEST
-    public String buildRedirectRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
-        RequestAbstractType requestMessage;
-        if (!isLogout) {
-            requestMessage = buildAuthnRequest(request);
-        } else {
-            LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
-                    getAttribute(SSOConstants.SESSION_BEAN_NAME);
-            if (Optional.ofNullable(sessionBean).isPresent()) {
-                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
-                        sessionBean.getSAML2SSO().getSessionIndex());
-            } else {
-                throw new SSOException("SLO Request can not be built. SSO Session is null.");
-            }
+    /**
+     * Returns SAML 2.0 Assertion Attribute Statement content.
+     *
+     * @param assertion the SAML 2.0 Assertion whose content is to be returned
+     * @return Attribute Statement content of the SAML 2.0 Assertion specified
+     */
+    private Map<String, String> getAssertionStatements(Assertion assertion) {
+        Map<String, String> results = new HashMap<>();
+        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements())
+                .isPresent())) {
+            Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
+            attributeStatements.
+                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
+                        Element value = attribute.getAttributeValues().get(0).getDOM();
+                        String attributeValue = value.getTextContent();
+                        results.put(attribute.getName(), attributeValue);
+                    }));
         }
-
-        String idpUrl;
-        String encodedRequestMessage = SAMLSSOUtils.
-                encodeRequestMessage(requestMessage, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
-        StringBuilder httpQueryString = new StringBuilder(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST +
-                "=" + encodedRequestMessage);
-
-        String relayState = getSSOAgentConfig().getSAML2().getRelayState();
-        if (Optional.ofNullable(relayState).isPresent()) {
-            try {
-                httpQueryString.append("&").append(RelayState.DEFAULT_ELEMENT_LOCAL_NAME).append("=").
-                        append(URLEncoder.encode(relayState, "UTF-8").trim());
-            } catch (UnsupportedEncodingException e) {
-                throw new SSOException("Error occurred while URLEncoding " + RelayState.DEFAULT_ELEMENT_LOCAL_NAME, e);
-            }
-        }
-
-        //  Add any additional parameters defined
-        if ((Optional.ofNullable(getSSOAgentConfig().getQueryParameters()).isPresent()) && (!getSSOAgentConfig().
-                getQueryParameters().isEmpty())) {
-            StringBuilder builder = new StringBuilder();
-            getSSOAgentConfig().getQueryParameters().entrySet().stream().
-                    filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
-                            ofNullable(entry.getValue()).
-                                    isPresent()) && (entry.getValue().length > 0))).
-                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
-                            forEach(parameter -> builder.append("&").append(filteredEntry.getKey()).
-                                            append("=").append(parameter)));
-            httpQueryString.append(builder);
-        }
-
-        //  TODO: CONSIDER DIGITAL SIGNING
-
-        if (getSSOAgentConfig().getSAML2().getIdPURL().contains("?")) {
-            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
-        } else {
-            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
-        }
-        return idpUrl;
+        return results;
     }
 
     /**
@@ -691,24 +656,59 @@ public class SAML2SSOManager {
         return logoutRequest;
     }
 
-    /**
-     * Returns SAML 2.0 Assertion Attribute Statement content.
-     *
-     * @param assertion the SAML 2.0 Assertion whose content is to be returned
-     * @return Attribute Statement content of the SAML 2.0 Assertion specified
-     */
-    private Map<String, String> getAssertionStatements(Assertion assertion) {
-        Map<String, String> results = new HashMap<>();
-        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements())
-                .isPresent())) {
-            Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
-            attributeStatements.
-                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
-                        Element value = attribute.getAttributeValues().get(0).getDOM();
-                        String attributeValue = value.getTextContent();
-                        results.put(attribute.getName(), attributeValue);
-                    }));
+    //  TODO: WRITE JAVADOCS AND TEST
+    public String buildRedirectRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
+        RequestAbstractType requestMessage;
+        if (!isLogout) {
+            requestMessage = buildAuthnRequest(request);
+        } else {
+            LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
+                    getAttribute(SSOConstants.SESSION_BEAN_NAME);
+            if (Optional.ofNullable(sessionBean).isPresent()) {
+                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
+                        sessionBean.getSAML2SSO().getSessionIndex());
+            } else {
+                throw new SSOException("SLO Request can not be built. SSO Session is null.");
+            }
         }
-        return results;
+
+        String idpUrl;
+        String encodedRequestMessage = SAMLSSOUtils.
+                encodeRequestMessage(requestMessage, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
+        StringBuilder httpQueryString = new StringBuilder(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST +
+                "=" + encodedRequestMessage);
+
+        String relayState = getSSOAgentConfig().getSAML2().getRelayState();
+        if (Optional.ofNullable(relayState).isPresent()) {
+            try {
+                httpQueryString.append("&").append(RelayState.DEFAULT_ELEMENT_LOCAL_NAME).append("=").
+                        append(URLEncoder.encode(relayState, "UTF-8").trim());
+            } catch (UnsupportedEncodingException e) {
+                throw new SSOException("Error occurred while URLEncoding " + RelayState.DEFAULT_ELEMENT_LOCAL_NAME, e);
+            }
+        }
+
+        //  Add any additional parameters defined
+        if ((Optional.ofNullable(getSSOAgentConfig().getQueryParameters()).isPresent()) && (!getSSOAgentConfig().
+                getQueryParameters().isEmpty())) {
+            StringBuilder builder = new StringBuilder();
+            getSSOAgentConfig().getQueryParameters().entrySet().stream().
+                    filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
+                            ofNullable(entry.getValue()).
+                            isPresent()) && (entry.getValue().length > 0))).
+                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
+                            forEach(parameter -> builder.append("&").append(filteredEntry.getKey()).
+                                    append("=").append(parameter)));
+            httpQueryString.append(builder);
+        }
+
+        //  TODO: CONSIDER DIGITAL SIGNING
+
+        if (getSSOAgentConfig().getSAML2().getIdPURL().contains("?")) {
+            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
+        } else {
+            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
+        }
+        return idpUrl;
     }
 }
