@@ -42,14 +42,14 @@ public class X509CredentialImplementation implements X509Credential {
     private PrivateKey privateKey;
 
     public X509CredentialImplementation(X509Certificate certificate) {
-        setPublicKey(certificate.getPublicKey());
-        setEntityCertificate(certificate);
+        publicKey = certificate.getPublicKey();
+        entityCertificate = certificate;
     }
 
     public X509CredentialImplementation(SSOX509Credential credential) throws SSOException {
-        setPublicKey(credential.getPublicKey());
-        setEntityCertificate(credential.getEntityCertificate());
-        setPrivateKey(credential.getPrivateKey());
+        publicKey = credential.getPublicKey();
+        entityCertificate = credential.getEntityCertificate();
+        privateKey = credential.getPrivateKey();
     }
 
     @Override
@@ -57,26 +57,14 @@ public class X509CredentialImplementation implements X509Credential {
         return publicKey;
     }
 
-    private void setPublicKey(PublicKey publicKey) {
-        this.publicKey = publicKey;
-    }
-
     @Override
     public PrivateKey getPrivateKey() {
         return privateKey;
     }
 
-    private void setPrivateKey(PrivateKey privateKey) {
-        this.privateKey = privateKey;
-    }
-
     @Override
     public X509Certificate getEntityCertificate() {
         return entityCertificate;
-    }
-
-    private void setEntityCertificate(X509Certificate entityCertificate) {
-        this.entityCertificate = entityCertificate;
     }
 
     /**

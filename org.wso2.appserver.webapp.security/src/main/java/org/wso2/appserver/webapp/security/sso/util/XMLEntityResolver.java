@@ -41,6 +41,6 @@ public class XMLEntityResolver implements EntityResolver {
      */
     @Override
     public InputSource resolveEntity(String publicId, String systemId) throws SAXException, IOException {
-        throw new SAXException("XML syntax contains invalid elements. Possibly an XML External Entity (XXE) attack.");
+        throw new SAXException("XML syntax contains invalid elements, possibly an XML External Entity (XXE) attack");
     }
 }

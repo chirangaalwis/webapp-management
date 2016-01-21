@@ -27,7 +27,7 @@ import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
  */
 public interface SignatureValidator {
     /**
-     * Validates an XML signature based on its content.
+     * Validates an XML Digital Signature based on its content.
      *
      * @param response              a SAML 2.0 based Response
      * @param assertion             a SAML 2.0 based Assertion

@@ -36,32 +36,32 @@ public class SAMLSignatureValidatorImplementation implements SignatureValidator 
         if (ssoAgentConfiguration.getSAML2().isResponseSigned()) {
             if (!Optional.ofNullable(response.getSignature()).isPresent()) {
                 throw new SSOException("SAML2 Response signing is enabled, but signature element not found " +
-                        "in SAML2 Response element.");
+                        "in SAML2 Response element");
             } else {
                 try {
                     org.opensaml.xml.signature.SignatureValidator validator =
                             new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                    ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()
-                                            .getEntityCertificate()));
+                                    ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential().
+                                            getEntityCertificate()));
                     validator.validate(response.getSignature());
                 } catch (ValidationException e) {
-                    throw new SSOException("Signature validation failed for SAML2 Response.");
+                    throw new SSOException("Signature validation failed for SAML2 Response");
                 }
             }
         }
         if (ssoAgentConfiguration.getSAML2().isAssertionSigned()) {
             if (!Optional.ofNullable(assertion.getSignature()).isPresent()) {
                 throw new SSOException("SAML2 Assertion signing is enabled, but signature element not found in " +
-                        "SAML2 Assertion element.");
+                        "SAML2 Assertion element");
             } else {
                 try {
                     org.opensaml.xml.signature.SignatureValidator validator =
                             new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                    ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()
-                                            .getEntityCertificate()));
+                                    ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential().
+                                            getEntityCertificate()));
                     validator.validate(assertion.getSignature());
                 } catch (ValidationException e) {
-                    throw new SSOException("Signature validation failed for SAML2 Assertion.");
+                    throw new SSOException("Signature validation failed for SAML2 Assertion");
                 }
             }
         }

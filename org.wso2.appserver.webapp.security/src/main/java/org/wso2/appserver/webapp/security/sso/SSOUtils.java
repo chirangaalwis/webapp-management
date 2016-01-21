@@ -30,21 +30,13 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * This class contains general utility functions used within the org.wso2.appserver.webapp.security.sso.
+ * This class contains general utility functions used within the single-sign-on (SSO) implementation.
  *
  * @since 6.0.0
  */
 public class SSOUtils {
     private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
     private static final Random random = new Random();
-
-    private static Random getRandom() {
-        return random;
-    }
-
-    public static Logger getLogger() {
-        return logger;
-    }
 
     /**
      * Returns a {@code Path} instance representing the base of Apache Tomcat instances.
@@ -57,7 +49,7 @@ public class SSOUtils {
         if (Optional.ofNullable(envVariableValue).isPresent()) {
             return Paths.get(envVariableValue);
         } else {
-            throw new SSOException("CATALINA_BASE environmental variable has not been set.");
+            throw new SSOException("CATALINA_BASE environmental variable has not been set");
         }
     }
 
@@ -81,10 +73,10 @@ public class SSOUtils {
      *                      be found
      */
     public static void loadPropertiesFromFile(Properties properties, Path filePath) throws SSOException {
-        if (Files.exists(filePath)) {
+        if ((Optional.ofNullable(filePath).isPresent()) && (Files.exists(filePath))) {
             try (InputStream fileInputStream = Files.newInputStream(filePath)) {
                 properties.load(fileInputStream);
-                getLogger().log(Level.INFO, "Successfully loaded the properties from the file");
+                logger.log(Level.INFO, "Successfully loaded the properties from the file");
             } catch (IOException e) {
                 throw new SSOException("Error when loading properties from the specified file " + filePath);
             }
@@ -100,7 +92,7 @@ public class SSOUtils {
      */
     public static String createID() {
         byte[] bytes = new byte[20]; // 160 bit
-        getRandom().nextBytes(bytes);
+        random.nextBytes(bytes);
         char[] characterMapping = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' };
 
         char[] characters = new char[40];
@@ -138,5 +130,4 @@ public class SSOUtils {
     public static boolean isCollectionEmpty(Collection collection) {
         return ((!Optional.ofNullable(collection).isPresent()) || (collection.isEmpty()));
     }
-
 }

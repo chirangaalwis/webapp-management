@@ -16,8 +16,7 @@
 package org.wso2.appserver.webapp.security.sso.util;
 
 /**
- * This is a singleton class which acts as a holder for an {@code Object} instance during the duration of the
- * single-sign-on (SSO) process.
+ * This is a singleton, utility class whose instances act as holders for {@code Object} type instances.
  *
  * @since 6.0.0
  */
@@ -28,7 +27,7 @@ public class SSOAgentDataHolder {
 
     //  a static initialization block
     static {
-        setInstance(new SSOAgentDataHolder());
+        instance = new SSOAgentDataHolder();
     }
 
     /**
@@ -47,9 +46,5 @@ public class SSOAgentDataHolder {
 
     public static SSOAgentDataHolder getInstance() {
         return instance;
-    }
-
-    private static void setInstance(SSOAgentDataHolder instance) {
-        SSOAgentDataHolder.instance = instance;
     }
 }

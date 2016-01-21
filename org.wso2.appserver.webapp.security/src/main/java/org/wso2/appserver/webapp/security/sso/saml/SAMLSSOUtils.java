@@ -21,6 +21,7 @@ import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.EncryptedAssertion;
 import org.opensaml.saml2.core.LogoutRequest;
@@ -78,11 +79,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import javax.crypto.SecretKey;
@@ -99,19 +103,7 @@ import javax.xml.parsers.ParserConfigurationException;
  */
 public class SAMLSSOUtils {
     private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
-    private static boolean bootStrapped;
-
-    public static Logger getLogger() {
-        return logger;
-    }
-
-    private static boolean isBootStrapped() {
-        return bootStrapped;
-    }
-
-    private static void setBootStrapped(boolean bootStrapped) {
-        SAMLSSOUtils.bootStrapped = bootStrapped;
-    }
+    private static boolean isBootStrapped;
 
     /**
      * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
@@ -147,7 +139,7 @@ public class SAMLSSOUtils {
                 isPresent())) {
             return Optional.of(ssoSPConfigProperties.getProperty(SSOConstants.SAMLSSOValveConstants.APP_SERVER_URL) +
                     contextPath + ssoSPConfigProperties.
-                    getProperty(SSOConstants.SAMLSSOValveConstants.CONSUMER_URL_POSTFIX));
+                    getProperty(SSOConstants.SSOAgentConfiguration.SAML2.CONSUMER_URL_POSTFIX));
         } else {
             return Optional.empty();
         }
@@ -161,14 +153,35 @@ public class SAMLSSOUtils {
      * @throws SSOException if an error occurs when bootstrapping the OpenSAML2 library
      */
     protected static void doBootstrap() throws SSOException {
-        if (!isBootStrapped()) {
+        if (!isBootStrapped) {
             try {
                 DefaultBootstrap.bootstrap();
-                setBootStrapped(true);
+                isBootStrapped = true;
             } catch (ConfigurationException e) {
                 throw new SSOException("Error in bootstrapping the OpenSAML2 library.", e);
             }
         }
+    }
+
+    /**
+     * Returns SAML 2.0 Assertion Attribute Statement content.
+     *
+     * @param assertion the SAML 2.0 Assertion whose content is to be returned
+     * @return Attribute Statement content of the SAML 2.0 Assertion specified
+     */
+    protected static Map<String, String> getAssertionStatements(Assertion assertion) {
+        Map<String, String> results = new HashMap<>();
+        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements()).
+                isPresent())) {
+            Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
+            attributeStatements.
+                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
+                        Element value = attribute.getAttributeValues().get(0).getDOM();
+                        String attributeValue = value.getTextContent();
+                        results.put(attribute.getName(), attributeValue);
+                    }));
+        }
+        return results;
     }
 
     /**
@@ -213,7 +226,7 @@ public class SAMLSSOUtils {
             return Base64.
                     encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
         } else {
-            getLogger().log(Level.FINE,
+            logger.log(Level.FINE,
                     "Unsupported SAML2 HTTP Binding. Defaulting to " + SAMLConstants.SAML2_POST_BINDING_URI);
             return Base64.
                     encodeBytes(writer.toString().getBytes(Charset.forName("UTF-8")), Base64.DONT_BREAK_LINES);
@@ -246,7 +259,7 @@ public class SAMLSSOUtils {
             writer.write(element, output);
             return new String(byteArrayOutputStream.toByteArray(), Charset.forName("UTF-8"));
         } catch (ClassNotFoundException | InstantiationException | MarshallingException | IllegalAccessException e) {
-            throw new SSOException("Error in marshalling SAML2 Assertion.", e);
+            throw new SSOException("Error in marshalling SAML2 Assertion", e);
         }
     }
 
@@ -265,14 +278,14 @@ public class SAMLSSOUtils {
         try {
             DocumentBuilder docBuilder = documentBuilderFactory.newDocumentBuilder();
             docBuilder.setEntityResolver(new XMLEntityResolver());
-            ByteArrayInputStream is = new ByteArrayInputStream(xmlString.getBytes(Charset.forName("UTF-8")));
-            Document document = docBuilder.parse(is);
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(xmlString.getBytes(Charset.forName("UTF-8")));
+            Document document = docBuilder.parse(inputStream);
             Element element = document.getDocumentElement();
             UnmarshallerFactory unmarshallerFactory = Configuration.getUnmarshallerFactory();
             Unmarshaller unmarshaller = unmarshallerFactory.getUnmarshaller(element);
             return unmarshaller.unmarshall(element);
         } catch (ParserConfigurationException | UnmarshallingException | SAXException | IOException e) {
-            throw new SSOException("Error in unmarshalling the XML string representation.", e);
+            throw new SSOException("Error in unmarshalling the XML string representation", e);
         }
     }
 
@@ -300,7 +313,48 @@ public class SAMLSSOUtils {
             decrypter.setRootInNewDocument(true);
             return decrypter.decrypt(encryptedAssertion);
         } catch (DecryptionException e) {
-            throw new SSOException("Decrypted assertion error.", e);
+            throw new SSOException("Decrypted assertion error", e);
+        }
+    }
+
+    /**
+     * Utility functions for handling digital signature application and validation.
+     */
+
+    /**
+     * Returns a {@code KeyStore} based on keystore properties specified.
+     *
+     * @param keyStoreConfigurationProperties the keystore properties
+     * @return the {@link KeyStore} instance generated
+     * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
+     */
+    protected static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
+        if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
+            return Optional.empty();
+        }
+
+        Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH));
+        Optional<String> keyStorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
+                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PASSWORD));
+
+        if ((!keyStorePasswordString.isPresent()) || (!keyStorePathString.isPresent())) {
+            return Optional.empty();
+        }
+
+        Path keyStorePath = Paths.get(keyStorePathString.get());
+        if (Files.exists(keyStorePath)) {
+            try (InputStream keystoreInputStream = Files.newInputStream(keyStorePath)) {
+                String keyStoreType = "JKS";
+                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+                keyStore.load(keystoreInputStream, keyStorePasswordString.get().toCharArray());
+                return Optional.of(keyStore);
+            } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
+                throw new SSOException("Error while loading key store.", e);
+            }
+        } else {
+            throw new SSOException("File path specified under " +
+                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
         }
     }
 
@@ -309,7 +363,7 @@ public class SAMLSSOUtils {
      *
      * @param authnRequest       the SAML 2.0 based Authentication Request (AuthnRequest)
      * @param signatureAlgorithm the algorithm used to compute the signature
-     * @param credential        the signature signing credential
+     * @param credential         the signature signing credential
      * @return the SAML 2.0 based Authentication Request (AuthnRequest) with XML Digital Signature set
      * @throws SSOException if an error occurs while signing the SAML 2.0 AuthnRequest message
      */
@@ -335,7 +389,7 @@ public class SAMLSSOUtils {
             Signer.signObjects(signatureList);
             return authnRequest;
         } catch (MarshallingException | SignatureException e) {
-            throw new SSOException("Error while signing the SAML 2.0 AuthnRequest message.", e);
+            throw new SSOException("Error while signing the SAML 2.0 AuthnRequest message", e);
         }
     }
 
@@ -369,7 +423,7 @@ public class SAMLSSOUtils {
             Signer.signObjects(signatureList);
             return logoutRequest;
         } catch (MarshallingException | SignatureException e) {
-            throw new SSOException("Error while signing the SAML 2.0 based LogoutRequest message.", e);
+            throw new SSOException("Error while signing the SAML 2.0 based LogoutRequest message", e);
         }
     }
 
@@ -398,7 +452,7 @@ public class SAMLSSOUtils {
             signature.setKeyInfo(keyInfo);
             return signature;
         } catch (CertificateEncodingException e) {
-            throw new SSOException("Error getting certificate.", e);
+            throw new SSOException("Error getting certificate", e);
         }
     }
 
@@ -417,47 +471,5 @@ public class SAMLSSOUtils {
         }
         return builder.buildObject(objectQualifiedName.getNamespaceURI(), objectQualifiedName.getLocalPart(),
                 objectQualifiedName.getPrefix());
-    }
-
-
-    /**
-     * Utility functions for handling digital signature application and validation.
-     */
-
-    /**
-     * Returns a {@code KeyStore} based on keystore properties specified.
-     *
-     * @param keyStoreConfigurationProperties the keystore properties
-     * @return the {@link KeyStore} instance generated
-     * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
-     */
-    protected static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
-        if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
-            return Optional.empty();
-        }
-
-        Optional<String> keyStorePathString = Optional.ofNullable(keyStoreConfigurationProperties.
-                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH));
-        Optional<String> keystorePasswordString = Optional.ofNullable(keyStoreConfigurationProperties.
-                getProperty(SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PASSWORD));
-
-        if ((!keystorePasswordString.isPresent()) || (!keyStorePathString.isPresent())) {
-            return Optional.empty();
-        }
-
-        Path keyStorePath = Paths.get(keyStorePathString.get());
-        if (Files.exists(keyStorePath)) {
-            try (InputStream keystoreInputStream = Files.newInputStream(keyStorePath)) {
-                String keyStoreType = "JKS";
-                KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-                keyStore.load(keystoreInputStream, keystorePasswordString.get().toCharArray());
-                return Optional.of(keyStore);
-            } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
-                throw new SSOException("Error while loading key store.", e);
-            }
-        } else {
-            throw new SSOException("File path specified under " +
-                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
-        }
     }
 }

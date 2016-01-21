@@ -22,7 +22,6 @@ import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.common.Extensions;
 import org.opensaml.saml2.core.Assertion;
-import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.saml2.core.AudienceRestriction;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
@@ -51,7 +50,6 @@ import org.opensaml.saml2.ecp.RelayState;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.util.Base64;
 import org.opensaml.xml.validation.ValidationException;
-import org.w3c.dom.Element;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
@@ -90,21 +88,9 @@ public class SAML2SSOManager {
     private SSOAgentConfiguration ssoAgentConfiguration;
 
     public SAML2SSOManager(SSOAgentConfiguration ssoAgentConfiguration) throws SSOException {
-        setSSOAgentConfig(ssoAgentConfiguration);
+        this.ssoAgentConfiguration = ssoAgentConfiguration;
         loadCustomSignatureValidatorClass();
         SAMLSSOUtils.doBootstrap();
-    }
-
-    public static Logger getLogger() {
-        return logger;
-    }
-
-    private void setSSOAgentConfig(SSOAgentConfiguration ssoAgentConfiguration) {
-        this.ssoAgentConfiguration = ssoAgentConfiguration;
-    }
-
-    public SSOAgentConfiguration getSSOAgentConfig() {
-        return ssoAgentConfiguration;
     }
 
     /**
@@ -112,7 +98,7 @@ public class SAML2SSOManager {
      */
     private void loadCustomSignatureValidatorClass() {
         //  Load custom Signature Validator Class
-        Optional.ofNullable(getSSOAgentConfig()).ifPresent(
+        Optional.ofNullable(ssoAgentConfiguration).ifPresent(
                 agent -> Optional.ofNullable(agent.getSAML2().getSignatureValidatorImplClass()).ifPresent(implClass -> {
                     try {
                         SSOAgentDataHolder.getInstance().
@@ -132,15 +118,15 @@ public class SAML2SSOManager {
      * @throws SSOException if SSO session is null
      */
     protected String buildPostRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
-        //  Parent complex type RequestAbstractType from which all SAML request types are derived
+        //  Parent complex type RequestAbstractType from which all SAML 2.0 request types are derived
         RequestAbstractType requestMessage;
         if (!isLogout) {
             requestMessage = buildAuthnRequest(request);
-            if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
+            if (ssoAgentConfiguration.getSAML2().isRequestSigned()) {
                 requestMessage = SAMLSSOUtils.
                         setSignature((AuthnRequest) requestMessage, XMLSignature.ALGO_ID_SIGNATURE_RSA,
                                 new X509CredentialImplementation(
-                                        getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                                        ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
             }
         } else {
             LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
@@ -148,11 +134,11 @@ public class SAML2SSOManager {
             if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
                         sessionBean.getSAML2SSO().getSessionIndex());
-                if (getSSOAgentConfig().getSAML2().isRequestSigned()) {
+                if (ssoAgentConfiguration.getSAML2().isRequestSigned()) {
                     requestMessage = SAMLSSOUtils.
                             setSignature((LogoutRequest) requestMessage, XMLSignature.ALGO_ID_SIGNATURE_RSA,
                                     new X509CredentialImplementation(
-                                            getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                                            ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
                 }
             } else {
                 throw new SSOException(
@@ -166,15 +152,15 @@ public class SAML2SSOManager {
         Map<String, String[]> parameters = new HashMap<>();
         parameters.
                 put(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST, new String[] { encodedRequestMessage });
-        if (Optional.ofNullable(getSSOAgentConfig().getSAML2().getRelayState()).isPresent()) {
+        if (Optional.ofNullable(ssoAgentConfiguration.getSAML2().getRelayState()).isPresent()) {
             parameters.put(RelayState.DEFAULT_ELEMENT_LOCAL_NAME,
-                    new String[] { getSSOAgentConfig().getSAML2().getRelayState() });
+                    new String[] { ssoAgentConfiguration.getSAML2().getRelayState() });
         }
 
         //  Add any additional parameters defined
-        if ((Optional.ofNullable(getSSOAgentConfig().getQueryParameters()).isPresent()) && (!getSSOAgentConfig().
+        if ((Optional.ofNullable(ssoAgentConfiguration.getQueryParameters()).isPresent()) && (!ssoAgentConfiguration.
                 getQueryParameters().isEmpty())) {
-            parameters.putAll(getSSOAgentConfig().getQueryParameters());
+            parameters.putAll(ssoAgentConfiguration.getQueryParameters());
         }
 
         StringBuilder htmlParameters = new StringBuilder();
@@ -185,13 +171,13 @@ public class SAML2SSOManager {
                         forEach(parameter -> htmlParameters.append("<input type='hidden' name='").
                                 append(filteredEntry.getKey()).append("' value='").append(parameter).append("'>\n")));
 
-        String htmlPayload = getSSOAgentConfig().getSAML2().getPostBindingRequestHTMLPayload();
+        String htmlPayload = ssoAgentConfiguration.getSAML2().getPostBindingRequestHTMLPayload();
         if ((!Optional.ofNullable(htmlPayload).isPresent()) || (!htmlPayload.contains("<!--$saml_params-->"))) {
             htmlPayload = "<html>\n" +
                     "<body>\n" +
-                    "<p>You are now redirected back to " + getSSOAgentConfig().getSAML2().getIdPURL() + " \n" +
+                    "<p>You are now redirected back to " + ssoAgentConfiguration.getSAML2().getIdPURL() + " \n" +
                     "If the redirection fails, please click the post button.</p>\n" +
-                    "<form method='post' action='" + getSSOAgentConfig().getSAML2().getIdPURL() + "'>\n" +
+                    "<form method='post' action='" + ssoAgentConfiguration.getSAML2().getIdPURL() + "'>\n" +
                     "<p>\n" +
                     htmlParameters.toString() +
                     "<button type='submit'>POST</button>\n" +
@@ -217,7 +203,7 @@ public class SAML2SSOManager {
     private AuthnRequest buildAuthnRequest(HttpServletRequest request) {
         //  Issuer identifies the entity that generated the request message
         Issuer issuer = new IssuerBuilder().buildObject();
-        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
+        issuer.setValue(ssoAgentConfiguration.getSAML2().getSPEntityId());
 
         //  NameIDPolicy element tailors the subject name identifier of assertions resulting from AuthnRequest
         NameIDPolicy nameIdPolicy = new NameIDPolicyBuilder().buildObject();
@@ -246,33 +232,33 @@ public class SAML2SSOManager {
         DateTime issueInstant = new DateTime();
 
         //  Create an AuthnRequest instance
-        AuthnRequest authRequest = new AuthnRequestBuilder().buildObject();
+        AuthnRequest authnRequest = new AuthnRequestBuilder().buildObject();
 
-        authRequest.setForceAuthn(getSSOAgentConfig().getSAML2().isForceAuthn());
-        authRequest.setIsPassive(getSSOAgentConfig().getSAML2().isPassiveAuthn());
-        authRequest.setIssueInstant(issueInstant);
-        authRequest.setProtocolBinding(getSSOAgentConfig().getSAML2().getHttpBinding());
-        authRequest.setAssertionConsumerServiceURL(getSSOAgentConfig().getSAML2().getACSURL());
-        authRequest.setIssuer(issuer);
-        authRequest.setNameIDPolicy(nameIdPolicy);
-        authRequest.setRequestedAuthnContext(requestedAuthnContext);
-        authRequest.setID(SSOUtils.createID());
-        authRequest.setVersion(SAMLVersion.VERSION_20);
-        authRequest.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
+        authnRequest.setForceAuthn(ssoAgentConfiguration.getSAML2().isForceAuthn());
+        authnRequest.setIsPassive(ssoAgentConfiguration.getSAML2().isPassiveAuthn());
+        authnRequest.setIssueInstant(issueInstant);
+        authnRequest.setProtocolBinding(ssoAgentConfiguration.getSAML2().getHttpBinding());
+        authnRequest.setAssertionConsumerServiceURL(ssoAgentConfiguration.getSAML2().getACSURL());
+        authnRequest.setIssuer(issuer);
+        authnRequest.setNameIDPolicy(nameIdPolicy);
+        authnRequest.setRequestedAuthnContext(requestedAuthnContext);
+        authnRequest.setID(SSOUtils.createID());
+        authnRequest.setVersion(SAMLVersion.VERSION_20);
+        authnRequest.setDestination(ssoAgentConfiguration.getSAML2().getIdPURL());
 
         //  If any optional protocol message extension elements that are agreed on between the communicating parties
         if (Optional.ofNullable(request.getAttribute(Extensions.LOCAL_NAME)).isPresent()) {
-            authRequest.setExtensions((Extensions) request.getAttribute(Extensions.LOCAL_NAME));
+            authnRequest.setExtensions((Extensions) request.getAttribute(Extensions.LOCAL_NAME));
         }
 
         //  Requesting SAML Attributes which the requester desires to be supplied by the identity provider,
         //  this Index value is registered in the identity provider
-        String index = getSSOAgentConfig().getSAML2().getAttributeConsumingServiceIndex();
+        String index = ssoAgentConfiguration.getSAML2().getAttributeConsumingServiceIndex();
         if ((Optional.ofNullable(index).isPresent()) && !(index.trim().isEmpty())) {
-            authRequest.setAttributeConsumingServiceIndex(Integer.parseInt(index));
+            authnRequest.setAttributeConsumingServiceIndex(Integer.parseInt(index));
         }
 
-        return authRequest;
+        return authnRequest;
     }
 
     /**
@@ -300,12 +286,12 @@ public class SAML2SSOManager {
      * If the redirect path is read from session then it is removed. Priority order of reading the redirect path is from
      * the Session, Context and Config, respectively.
      *
-     * @param request              the HTTP servlet request
-     * @param redirectPathAfterSLO the redirect path specified under redirectPathAfterSLO property of global
-     *                             single-sign-on (SSO) configurations
+     * @param request            the HTTP servlet request
+     * @param configRedirectPath the redirect path specified under redirectPathAfterSLO property of global
+     *                           single-sign-on (SSO) configurations
      * @return redirect path relative to the current application path
      */
-    protected String readAndForgetRedirectPathAfterSLO(Request request, String redirectPathAfterSLO) {
+    protected String readAndForgetRedirectPathAfterSLO(Request request, String configRedirectPath) {
         Optional<String> redirectPath = Optional.empty();
 
         if (Optional.ofNullable(request.getSession(false)).isPresent()) {
@@ -313,23 +299,20 @@ public class SAML2SSOManager {
                     getAttribute(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
             request.getSession(false).removeAttribute(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO);
         }
-
         if (!redirectPath.isPresent()) {
             redirectPath = Optional.ofNullable(
                     request.getContext().findParameter(SSOConstants.SAMLSSOValveConstants.REDIRECT_PATH_AFTER_SLO));
         }
-
         if (!redirectPath.isPresent()) {
-            redirectPath = Optional.ofNullable(redirectPathAfterSLO);
+            redirectPath = Optional.ofNullable(configRedirectPath);
         }
-
         if ((redirectPath.isPresent()) && (!redirectPath.get().isEmpty())) {
             redirectPath = Optional.ofNullable(request.getContext().getPath().concat(redirectPath.get()));
         } else {
             redirectPath = Optional.ofNullable(request.getContext().getPath());
         }
 
-        getLogger().log(Level.FINE, "Redirect path = " + redirectPath);
+        logger.log(Level.FINE, "Redirect path = " + redirectPath);
 
         return redirectPath.get();
     }
@@ -358,11 +341,11 @@ public class SAML2SSOManager {
 
             if ((Optional.ofNullable(relayState).isPresent()) && (!relayState.isEmpty()) && (!("null").
                     equalsIgnoreCase(relayState))) {
-                //  Additional checks for incompetent IdPs
-                getSSOAgentConfig().getSAML2().setRelayState(relayState);
+                //  Additional checks for incompetent identity providers
+                ssoAgentConfiguration.getSAML2().setRelayState(relayState);
             }
         } else {
-            throw new SSOException("Invalid SAML2 Response. SAML2 Response cannot be null.");
+            throw new SSOException("Invalid SAML2 Response. SAML2 Response cannot be null");
         }
     }
 
@@ -384,18 +367,18 @@ public class SAML2SSOManager {
         sessionBean.getSAML2SSO().setSAMLResponse(saml2Response);
 
         Optional<Assertion> assertion = Optional.empty();
-        if (getSSOAgentConfig().getSAML2().isAssertionEncrypted()) {
+        if (ssoAgentConfiguration.getSAML2().isAssertionEncrypted()) {
             List<EncryptedAssertion> encryptedAssertions = saml2Response.getEncryptedAssertions();
             EncryptedAssertion encryptedAssertion;
             if (!SSOUtils.isCollectionEmpty(encryptedAssertions)) {
                 encryptedAssertion = encryptedAssertions.stream().findFirst().get();
                 try {
-                    assertion = Optional.ofNullable(SAMLSSOUtils
-                                    .decryptAssertion(getSSOAgentConfig().getSAML2().getSSOAgentX509Credential(),
-                                            encryptedAssertion));
+                    assertion = Optional.ofNullable(SAMLSSOUtils.
+                            decryptAssertion(ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential(),
+                                    encryptedAssertion));
                 } catch (Exception e) {
-                    getLogger().log(Level.FINE, "Assertion decryption failure : ", e);
-                    throw new SSOException("Unable to decrypt the SAML2 Assertion.");
+                    logger.log(Level.FINE, "Assertion decryption failure : ", e);
+                    throw new SSOException("Unable to decrypt the SAML2 Assertion");
                 }
             }
         } else {
@@ -406,29 +389,29 @@ public class SAML2SSOManager {
         }
         if (!assertion.isPresent()) {
             if (isNoPassive(saml2Response)) {
-                getLogger().log(Level.FINE, "Cannot authenticate in passive mode.");
+                logger.log(Level.FINE, "Cannot authenticate in passive mode");
                 return;
             }
-            throw new SSOException("SAML2 Assertion not found in the Response.");
+            throw new SSOException("SAML2 Assertion not found in the Response");
         }
 
         Optional<String> idPEntityIdValue = Optional.ofNullable(assertion.get().getIssuer().getValue());
         if ((!idPEntityIdValue.isPresent()) || (idPEntityIdValue.get().isEmpty())) {
-            throw new SSOException("SAML2 Response does not contain an Issuer value.");
-        } else if (!idPEntityIdValue.get().equals(getSSOAgentConfig().getSAML2().getIdPEntityId())) {
-            throw new SSOException("SAML2 Response Issuer verification failed.");
+            throw new SSOException("SAML2 Response does not contain an Issuer value");
+        } else if (!idPEntityIdValue.get().equals(ssoAgentConfiguration.getSAML2().getIdPEntityId())) {
+            throw new SSOException("SAML2 Response Issuer verification failed");
         }
         sessionBean.getSAML2SSO().setAssertion(assertion.get());
         //  Cannot marshall SAML assertion here, before signature validation due to an issue in OpenSAML
 
         //  Gets the subject name from the Response Object and forward it to login_action.jsp
         Optional<String> subject = Optional.empty();
-        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional
-                .ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
+        if ((Optional.ofNullable(assertion.get().getSubject()).isPresent()) && (Optional.
+                ofNullable(assertion.get().getSubject().getNameID()).isPresent())) {
             subject = Optional.of(assertion.get().getSubject().getNameID().getValue());
         }
         if (!subject.isPresent()) {
-            throw new SSOException("SAML2 Response does not contain the name of the subject.");
+            throw new SSOException("SAML2 Response does not contain the name of the subject");
         }
 
         //  Sets the subject in the session bean
@@ -438,18 +421,17 @@ public class SAML2SSOManager {
         //  Validates the audience restriction
         validateAudienceRestriction(assertion.get());
 
-        //  Validate signature
-        //  TODO: changed
+        //  Validates the signature
         validateSignature(saml2Response, assertion.get());
 
         //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(SAMLSSOUtils.marshall(assertion.get()));
 
         ((LoggedInSessionBean) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
-                setSubjectAttributes(getAssertionStatements(assertion.get()));
+                setSubjectAttributes(SAMLSSOUtils.getAssertionStatements(assertion.get()));
 
         //  For removing the session when the single-logout request made by the service provider itself
-        if (getSSOAgentConfig().getSAML2().isSLOEnabled()) {
+        if (ssoAgentConfiguration.getSAML2().isSLOEnabled()) {
             Optional<String> sessionId = Optional.
                     ofNullable(assertion.get().getAuthnStatements().stream().findFirst().get().getSessionIndex());
             if (!sessionId.isPresent()) {
@@ -501,7 +483,7 @@ public class SAML2SSOManager {
         Stream<AudienceRestriction> audienceExistingStream = audienceRestrictions.stream().filter(audienceRestriction ->
                 (((Optional.ofNullable(audienceRestriction.getAudiences()).isPresent()) && (!audienceRestriction.
                         getAudiences().isEmpty()))) && (audienceRestriction.getAudiences().stream().
-                        filter(audience -> getSSOAgentConfig().getSAML2().getSPEntityId().
+                        filter(audience -> ssoAgentConfiguration.getSAML2().getSPEntityId().
                                 equals(audience.getAudienceURI()))).count() > 0);
 
         if (audienceExistingStream.count() == 0) {
@@ -509,68 +491,54 @@ public class SAML2SSOManager {
         }
     }
 
+    /**
+     * Validates the XML Digital Signature of specified SAML 2.0 based Response and Assertion.
+     *
+     * @param response  the SAML 2.0 based Response whose XML Digital Signature is to be validated
+     * @param assertion the SAML 2.0 based Assertion whose XML Digital Signature is to be validated
+     * @throws SSOException if an error occurs during the signature validation
+     */
     private void validateSignature(Response response, Assertion assertion) throws SSOException {
         if (Optional.ofNullable(SSOAgentDataHolder.getInstance().getObject()).isPresent()) {
             //  Custom implementation of signature validation
             SignatureValidator signatureValidatorUtility = (SignatureValidator) SSOAgentDataHolder.
                     getInstance().getObject();
-            signatureValidatorUtility.validateSignature(response, assertion, getSSOAgentConfig());
+            signatureValidatorUtility.validateSignature(response, assertion, ssoAgentConfiguration);
         } else {
             //  If custom implementation not found, execute the default implementation
-            if (getSSOAgentConfig().getSAML2().isResponseSigned()) {
+            if (ssoAgentConfiguration.getSAML2().isResponseSigned()) {
                 if (!Optional.ofNullable(response.getSignature()).isPresent()) {
-                    throw new SSOException("SAML2 Response signing is enabled, but signature element not "
-                            + "found in SAML2 Response element.");
+                    throw new SSOException("SAML2 Response signing is enabled, but signature element not " +
+                            "found in SAML2 Response element.");
                 } else {
                     try {
                         org.opensaml.xml.signature.SignatureValidator validator =
                                 new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                        getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                                        ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
                         validator.validate(response.getSignature());
                     } catch (ValidationException e) {
-                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        logger.log(Level.FINE, "Validation exception : ", e);
                         throw new SSOException("Signature validation failed for SAML2 Response.");
                     }
                 }
             }
-            if (getSSOAgentConfig().getSAML2().isAssertionSigned()) {
+            if (ssoAgentConfiguration.getSAML2().isAssertionSigned()) {
                 if (!Optional.ofNullable(assertion.getSignature()).isPresent()) {
-                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not "
-                            + "found in SAML2 Assertion element.");
+                    throw new SSOException("SAML2 Assertion signing is enabled, but signature element not " +
+                            "found in SAML2 Assertion element.");
                 } else {
                     try {
                         org.opensaml.xml.signature.SignatureValidator validator =
                                 new org.opensaml.xml.signature.SignatureValidator(new X509CredentialImplementation(
-                                        getSSOAgentConfig().getSAML2().getSSOAgentX509Credential()));
+                                        ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
                         validator.validate(assertion.getSignature());
                     } catch (ValidationException e) {
-                        getLogger().log(Level.FINE, "Validation exception : ", e);
+                        logger.log(Level.FINE, "Validation exception : ", e);
                         throw new SSOException("Signature validation failed for SAML2 Assertion.");
                     }
                 }
             }
         }
-    }
-
-    /**
-     * Returns SAML 2.0 Assertion Attribute Statement content.
-     *
-     * @param assertion the SAML 2.0 Assertion whose content is to be returned
-     * @return Attribute Statement content of the SAML 2.0 Assertion specified
-     */
-    private Map<String, String> getAssertionStatements(Assertion assertion) {
-        Map<String, String> results = new HashMap<>();
-        if ((Optional.ofNullable(assertion).isPresent()) && (Optional.ofNullable(assertion.getAttributeStatements())
-                .isPresent())) {
-            Stream<AttributeStatement> attributeStatements = assertion.getAttributeStatements().stream();
-            attributeStatements.
-                    forEach(attributeStatement -> attributeStatement.getAttributes().stream().forEach(attribute -> {
-                        Element value = attribute.getAttributeValues().get(0).getDOM();
-                        String attributeValue = value.getTextContent();
-                        results.put(attribute.getName(), attributeValue);
-                    }));
-        }
-        return results;
     }
 
     /**
@@ -608,7 +576,7 @@ public class SAML2SSOManager {
                     try {
                         httpSession.invalidate();
                     } catch (IllegalStateException ignore) {
-                        getLogger().log(Level.FINE, "Ignoring exception : ", ignore);
+                        logger.log(Level.FINE, "Ignoring exception : ", ignore);
                     }
                 });
             });
@@ -630,7 +598,7 @@ public class SAML2SSOManager {
         LogoutRequest logoutRequest = new LogoutRequestBuilder().buildObject();
 
         logoutRequest.setID(SSOUtils.createID());
-        logoutRequest.setDestination(getSSOAgentConfig().getSAML2().getIdPURL());
+        logoutRequest.setDestination(ssoAgentConfiguration.getSAML2().getIdPURL());
 
         DateTime issueInstant = new DateTime();
         logoutRequest.setIssueInstant(issueInstant);
@@ -638,7 +606,7 @@ public class SAML2SSOManager {
         logoutRequest.setNotOnOrAfter(new DateTime(issueInstant.getMillis() + (5 * 60 * 1000)));
 
         Issuer issuer = new IssuerBuilder().buildObject();
-        issuer.setValue(getSSOAgentConfig().getSAML2().getSPEntityId());
+        issuer.setValue(ssoAgentConfiguration.getSAML2().getSPEntityId());
         logoutRequest.setIssuer(issuer);
 
         NameID nameId = new NameIDBuilder().buildObject();
@@ -678,7 +646,7 @@ public class SAML2SSOManager {
         StringBuilder httpQueryString = new StringBuilder(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST +
                 "=" + encodedRequestMessage);
 
-        String relayState = getSSOAgentConfig().getSAML2().getRelayState();
+        String relayState = ssoAgentConfiguration.getSAML2().getRelayState();
         if (Optional.ofNullable(relayState).isPresent()) {
             try {
                 httpQueryString.append("&").append(RelayState.DEFAULT_ELEMENT_LOCAL_NAME).append("=").
@@ -689,10 +657,10 @@ public class SAML2SSOManager {
         }
 
         //  Add any additional parameters defined
-        if ((Optional.ofNullable(getSSOAgentConfig().getQueryParameters()).isPresent()) && (!getSSOAgentConfig().
+        if ((Optional.ofNullable(ssoAgentConfiguration.getQueryParameters()).isPresent()) && (!ssoAgentConfiguration.
                 getQueryParameters().isEmpty())) {
             StringBuilder builder = new StringBuilder();
-            getSSOAgentConfig().getQueryParameters().entrySet().stream().
+            ssoAgentConfiguration.getQueryParameters().entrySet().stream().
                     filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
                             ofNullable(entry.getValue()).
                             isPresent()) && (entry.getValue().length > 0))).
@@ -704,10 +672,10 @@ public class SAML2SSOManager {
 
         //  TODO: CONSIDER DIGITAL SIGNING
 
-        if (getSSOAgentConfig().getSAML2().getIdPURL().contains("?")) {
-            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
+        if (ssoAgentConfiguration.getSAML2().getIdPURL().contains("?")) {
+            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
         } else {
-            idpUrl = getSSOAgentConfig().getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
+            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
         }
         return idpUrl;
     }

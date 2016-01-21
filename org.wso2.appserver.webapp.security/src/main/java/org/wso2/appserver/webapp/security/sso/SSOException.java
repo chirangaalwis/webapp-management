@@ -25,6 +25,8 @@ import javax.servlet.ServletException;
  * @since 6.0.0
  */
 public class SSOException extends ServletException {
+    private static final long serialVersionUID = -4333786872956047763L;
+
     public SSOException(String message) {
         super(message);
     }

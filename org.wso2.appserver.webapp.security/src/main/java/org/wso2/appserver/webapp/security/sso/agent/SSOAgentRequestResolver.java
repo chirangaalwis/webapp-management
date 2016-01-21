@@ -33,23 +33,7 @@ public class SSOAgentRequestResolver {
     private HttpServletRequest request;
 
     public SSOAgentRequestResolver(HttpServletRequest request, SSOAgentConfiguration ssoAgentConfiguration) {
-        setRequest(request);
-        setSSOAgentConfiguration(ssoAgentConfiguration);
-    }
-
-    private SSOAgentConfiguration getSSOAgentConfiguration() {
-        return ssoAgentConfiguration;
-    }
-
-    private void setSSOAgentConfiguration(SSOAgentConfiguration ssoAgentConfiguration) {
         this.ssoAgentConfiguration = ssoAgentConfiguration;
-    }
-
-    private HttpServletRequest getRequest() {
-        return request;
-    }
-
-    private void setRequest(HttpServletRequest request) {
         this.request = request;
     }
 
@@ -61,8 +45,8 @@ public class SSOAgentRequestResolver {
      * authentication request(s), else false
      */
     public boolean isSAML2SSOURL() {
-        return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (getRequest().getRequestURI().
-                endsWith(getSSOAgentConfiguration().getSAML2SSOURL()));
+        return (ssoAgentConfiguration.isSAML2SSOLoginEnabled()) && (request.getRequestURI().
+                endsWith(ssoAgentConfiguration.getSAML2SSOURL()));
     }
 
     /**
@@ -75,7 +59,7 @@ public class SSOAgentRequestResolver {
      * service provider
      */
     public boolean isSAML2SSOResponse() {
-        return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
+        return (ssoAgentConfiguration.isSAML2SSOLoginEnabled()) && (Optional.ofNullable(request.
                 getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)).isPresent());
     }
 
@@ -85,7 +69,7 @@ public class SSOAgentRequestResolver {
      * @return true if the request is an identity provider initiated SAML 2.0 single-logout (SLO) request, else false
      */
     public boolean isSAML2SLORequest() {
-        return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) && (Optional.ofNullable(getRequest().
+        return (ssoAgentConfiguration.isSAML2SSOLoginEnabled()) && (Optional.ofNullable(request.
                 getParameter(AuthnRequest.DEFAULT_ELEMENT_LOCAL_NAME)).isPresent());
     }
 
@@ -97,9 +81,9 @@ public class SSOAgentRequestResolver {
      * SAML 2.0 single-logout (SLO) request(s), else false
      */
     public boolean isSLOURL() {
-        return (getSSOAgentConfiguration().isSAML2SSOLoginEnabled()) &&
-                (getSSOAgentConfiguration().getSAML2().isSLOEnabled()) &&
-                (getRequest().getRequestURI().endsWith(getSSOAgentConfiguration().getSAML2().getSLOURL()));
+        return (ssoAgentConfiguration.isSAML2SSOLoginEnabled()) &&
+                (ssoAgentConfiguration.getSAML2().isSLOEnabled()) &&
+                (request.getRequestURI().endsWith(ssoAgentConfiguration.getSAML2().getSLOURL()));
     }
 
     /**
@@ -108,7 +92,7 @@ public class SSOAgentRequestResolver {
      * @return true if SAML 2.0 binding is HTTP POST type binding, else false
      */
     public boolean isHttpPostBinding() {
-        String httpBindingString = getSSOAgentConfiguration().getSAML2().getHttpBinding();
+        String httpBindingString = ssoAgentConfiguration.getSAML2().getHttpBinding();
         return (Optional.ofNullable(httpBindingString).isPresent()) && (SAMLConstants.SAML2_POST_BINDING_URI.
                 equals(httpBindingString));
     }
@@ -121,6 +105,6 @@ public class SSOAgentRequestResolver {
      * property SkipURIs, else returns false
      */
     public boolean isURLToSkip() {
-        return getSSOAgentConfiguration().getSkipURIs().contains(getRequest().getRequestURI());
+        return ssoAgentConfiguration.getSkipURIs().contains(request.getRequestURI());
     }
 }

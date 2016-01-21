@@ -80,14 +80,15 @@ public class SSOConstants {
             public static final String IS_FORCE_AUTHN = "SAML2.IsForceAuthn";
             public static final String RELAY_STATE = "SAML2.RelayState";
             public static final String POST_BINDING_REQUEST_HTML_PAYLOAD = "SAML2.PostBindingRequestHTMLPayload";
-            public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
+            public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
 
             //  Digital signature configuration properties
             public static final String KEYSTORE_PATH = "SAML.KeyStorePath";
             public static final String KEYSTORE_PASSWORD = "SAML.KeyStorePassword";
             public static final String IDP_PUBLIC_CERTIFICATE_ALIAS = "SAML.IdPCertAlias";
             public static final String SP_PRIVATE_KEY_ALIAS = "SAML.PrivateKeyAlias";
-            public static final String SP_PRIVATE_KEY_PASSWORD = "SAML.PrivateKeyAlias";
+            public static final String SP_PRIVATE_KEY_PASSWORD = "SAML.PrivateKeyPassword";
+            public static final String SIGNATURE_VALIDATOR = "SAML2.SignatureValidatorImplClass";
 
             /**
              * Prevents instantiating the SAML2 nested class.
@@ -131,7 +132,6 @@ public class SSOConstants {
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";
         //  SSO configuration property name constants
         public static final String APP_SERVER_URL = "ApplicationServerURL";
-        public static final String CONSUMER_URL_POSTFIX = "SAML.ConsumerUrlPostFix";
         public static final String HANDLE_CONSUMER_URL_AFTER_SLO = "handleConsumerURLAfterSLO";
 
         public static final String REDIRECT_PATH_AFTER_SLO = "redirectPathAfterSLO";

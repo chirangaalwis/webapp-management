@@ -46,24 +46,12 @@ public class SSOX509Credential {
         return privateKey;
     }
 
-    private void setPrivateKey(PrivateKey privateKey) {
-        this.privateKey = privateKey;
-    }
-
     public PublicKey getPublicKey() {
         return publicKey;
     }
 
-    private void setPublicKey(PublicKey publicKey) {
-        this.publicKey = publicKey;
-    }
-
     public X509Certificate getEntityCertificate() {
         return entityCertificate;
-    }
-
-    private void setEntityCertificate(X509Certificate entityCertificate) {
-        this.entityCertificate = entityCertificate;
     }
 
     /**
@@ -80,7 +68,7 @@ public class SSOX509Credential {
                     getProperty(SSOConstants.SSOAgentConfiguration.SAML2.IDP_PUBLIC_CERTIFICATE_ALIAS));
             try {
                 if (certificateAlias.isPresent()) {
-                    setEntityCertificate((X509Certificate) keyStore.getCertificate(certificateAlias.get()));
+                    entityCertificate = (X509Certificate) keyStore.getCertificate(certificateAlias.get());
                 }
             } catch (KeyStoreException e) {
                 throw new SSOException(
@@ -93,13 +81,13 @@ public class SSOX509Credential {
                     getProperty(SSOConstants.SSOAgentConfiguration.SAML2.SP_PRIVATE_KEY_PASSWORD));
             try {
                 if ((privateKeyAlias.isPresent()) && (privateKeyPassword.isPresent())) {
-                    setPrivateKey((PrivateKey) keyStore.
-                            getKey(privateKeyAlias.get(), privateKeyPassword.get().toCharArray()));
+                    privateKey = (PrivateKey) keyStore.
+                            getKey(privateKeyAlias.get(), privateKeyPassword.get().toCharArray());
                 }
             } catch (KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
                 throw new SSOException("Error occurred while retrieving the private key");
             }
-            setPublicKey(getEntityCertificate().getPublicKey());
+            publicKey = getEntityCertificate().getPublicKey();
         }
     }
 }
