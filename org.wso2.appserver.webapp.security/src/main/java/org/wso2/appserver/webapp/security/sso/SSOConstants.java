@@ -21,7 +21,7 @@ package org.wso2.appserver.webapp.security.sso;
  * @since 6.0.0
  */
 public class SSOConstants {
-    public static final String SESSION_BEAN_NAME = "org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean";
+    public static final String SESSION_BEAN_NAME = "org.wso2.appserver.webapp.security.sso.bean.LoggedInSession";
 
     /**
      * Prevents instantiating the SSOConstants class.
@@ -96,24 +96,6 @@ public class SSOConstants {
             private SAML2() {
             }
         }
-
-        /**
-         * This class defines the OAuth 2.0 specific single-sign-on (SSO) configuration property name constants.
-         */
-        public static class OAuth2 {
-            public static final String ENABLE_OAUTH2_SAML2_OAUTH2_GRANT = "EnableOAuth2SAML2Grant";
-            public static final String OAUTH2_SAML2_GRANT_URL = "OAuth2SAML2GrantURL";
-
-            public static final String CLIENT_ID = "OAuth2.ClientId";
-            public static final String CLIENT_SECRET = "OAuth2.ClientSecret";
-            public static final String TOKEN_URL = "OAuth2.TokenURL";
-
-            /**
-             * Prevents instantiating the OAuth2 nested class.
-             */
-            private OAuth2() {
-            }
-        }
     }
 
     /**
@@ -122,11 +104,11 @@ public class SSOConstants {
     public static class SAMLSSOValveConstants {
         //  Environmental variable property name constant
         public static final String CATALINA_BASE = "catalina.base";
-        //  Context parameter property name constant
-        public static final String ENABLE_SAML2_SSO = "enable.saml2.sso";
         //  File path related constants
         public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
+        public static final String WSO2_CONFIGURATION_FOLDER_NAME = "wso2";
         public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
+        public static final String WSO2AS_CONFIG_FILE_NAME = "wso2as-web.xml";
         //  HTTP servlet request session notes' property name and attribute name constants
         public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";

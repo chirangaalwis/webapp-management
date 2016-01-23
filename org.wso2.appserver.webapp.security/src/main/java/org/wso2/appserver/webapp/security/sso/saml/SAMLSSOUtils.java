@@ -60,6 +60,8 @@ import org.w3c.dom.ls.LSSerializer;
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
+import org.wso2.appserver.webapp.security.sso.saml.signature.SSOX509Credential;
+import org.wso2.appserver.webapp.security.sso.saml.signature.X509CredentialImplementation;
 import org.wso2.appserver.webapp.security.sso.util.XMLEntityResolver;
 import org.xml.sax.SAXException;
 
@@ -92,8 +94,6 @@ import java.util.zip.DeflaterOutputStream;
 import javax.crypto.SecretKey;
 import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * This class defines the implementation of utility functions associated with SAML 2.0 based
@@ -102,7 +102,7 @@ import javax.xml.parsers.ParserConfigurationException;
  * @since 6.0.0
  */
 public class SAMLSSOUtils {
-    private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
+    private static final Logger logger = Logger.getLogger(SAMLSSOUtils.class.getName());
     private static boolean isBootStrapped;
 
     /**
@@ -158,7 +158,7 @@ public class SAMLSSOUtils {
                 DefaultBootstrap.bootstrap();
                 isBootStrapped = true;
             } catch (ConfigurationException e) {
-                throw new SSOException("Error in bootstrapping the OpenSAML2 library.", e);
+                throw new SSOException("Error in bootstrapping the OpenSAML2 library", e);
             }
         }
     }
@@ -201,8 +201,8 @@ public class SAMLSSOUtils {
             //  Marshall this element, and its children, and root them in a newly created Document
             authDOM = marshaller.marshall(requestMessage);
         } catch (MarshallingException e) {
-            throw new SSOException("Error occurred while encoding SAML2 request. Failed to marshall the SAML 2.0. " +
-                    "Request element XMLObject to its corresponding W3C DOM element.", e);
+            throw new SSOException("Error occurred while encoding SAML2 request, failed to marshall the SAML 2.0. " +
+                    "Request element XMLObject to its corresponding W3C DOM element", e);
         }
 
         StringWriter writer = new StringWriter();
@@ -220,7 +220,7 @@ public class SAMLSSOUtils {
                         encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
                 return URLEncoder.encode(encodedRequestMessage, "UTF-8").trim();
             } catch (IOException e) {
-                throw new SSOException("Error occurred while encoding SAML2 request.", e);
+                throw new SSOException("Error occurred while encoding SAML2 request", e);
             }
         } else if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
             return Base64.
@@ -272,19 +272,15 @@ public class SAMLSSOUtils {
      */
     public static XMLObject unmarshall(String xmlString) throws SSOException {
         doBootstrap();
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-        documentBuilderFactory.setExpandEntityReferences(false);
-        documentBuilderFactory.setNamespaceAware(true);
         try {
-            DocumentBuilder docBuilder = documentBuilderFactory.newDocumentBuilder();
-            docBuilder.setEntityResolver(new XMLEntityResolver());
+            DocumentBuilder docBuilder = SSOUtils.getDocumentBuilder(false, true, new XMLEntityResolver());
             ByteArrayInputStream inputStream = new ByteArrayInputStream(xmlString.getBytes(Charset.forName("UTF-8")));
             Document document = docBuilder.parse(inputStream);
             Element element = document.getDocumentElement();
             UnmarshallerFactory unmarshallerFactory = Configuration.getUnmarshallerFactory();
             Unmarshaller unmarshaller = unmarshallerFactory.getUnmarshaller(element);
             return unmarshaller.unmarshall(element);
-        } catch (ParserConfigurationException | UnmarshallingException | SAXException | IOException e) {
+        } catch (UnmarshallingException | SAXException | IOException e) {
             throw new SSOException("Error in unmarshalling the XML string representation", e);
         }
     }
@@ -328,7 +324,7 @@ public class SAMLSSOUtils {
      * @return the {@link KeyStore} instance generated
      * @throws SSOException if an error occurs while generating the {@link KeyStore} instance
      */
-    protected static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
+    public static Optional generateKeyStore(Properties keyStoreConfigurationProperties) throws SSOException {
         if (!Optional.ofNullable(keyStoreConfigurationProperties).isPresent()) {
             return Optional.empty();
         }
@@ -350,11 +346,11 @@ public class SAMLSSOUtils {
                 keyStore.load(keystoreInputStream, keyStorePasswordString.get().toCharArray());
                 return Optional.of(keyStore);
             } catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException e) {
-                throw new SSOException("Error while loading key store.", e);
+                throw new SSOException("Error while loading key store", e);
             }
         } else {
             throw new SSOException("File path specified under " +
-                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist.");
+                    SSOConstants.SSOAgentConfiguration.SAML2.KEYSTORE_PATH + " does not exist");
         }
     }
 

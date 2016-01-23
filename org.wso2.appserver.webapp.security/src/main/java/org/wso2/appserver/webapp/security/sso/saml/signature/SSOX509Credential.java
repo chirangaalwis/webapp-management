@@ -13,10 +13,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.wso2.appserver.webapp.security.sso.saml;
+package org.wso2.appserver.webapp.security.sso.saml.signature;
 
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
 import org.wso2.appserver.webapp.security.sso.SSOException;
+import org.wso2.appserver.webapp.security.sso.saml.SAMLSSOUtils;
 
 import java.security.KeyStore;
 import java.security.KeyStoreException;

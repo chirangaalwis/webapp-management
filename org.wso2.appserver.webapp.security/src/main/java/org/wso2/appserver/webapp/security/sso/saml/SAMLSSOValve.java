@@ -24,6 +24,7 @@ import org.wso2.appserver.webapp.security.sso.SSOUtils;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentRequestResolver;
 import org.wso2.appserver.webapp.security.sso.bean.RelayState;
+import org.wso2.appserver.webapp.security.sso.saml.signature.SSOX509Credential;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -75,11 +76,10 @@ public class SAMLSSOValve extends SingleSignOn {
     public void invoke(Request request, Response response) throws IOException, ServletException {
         logger.log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
 
-        //  Checks if SAML 2.0 single-sign-on valve is enabled in the context-param
-        if (!(Boolean.parseBoolean(
-                request.getContext().findParameter(SSOConstants.SAMLSSOValveConstants.ENABLE_SAML2_SSO)))) {
+        //  Checks if single-sign-on feature is enabled
+        if (!SSOUtils.singleSignOnEnabled()) {
             logger.log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
-            //  Moves onto the next valve, if SAML2 SSO valve is not enabled
+            //  Moves onto the next valve, if single-sign-on is not enabled
             getNext().invoke(request, response);
             return;
         }

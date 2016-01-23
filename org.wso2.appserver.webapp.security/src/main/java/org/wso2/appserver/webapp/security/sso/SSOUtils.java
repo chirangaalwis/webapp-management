@@ -15,6 +15,14 @@
  */
 package org.wso2.appserver.webapp.security.sso;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.wso2.appserver.webapp.security.sso.util.XMLEntityResolver;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.SAXException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -28,6 +36,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * This class contains general utility functions used within the single-sign-on (SSO) implementation.
@@ -62,6 +73,32 @@ public class SSOUtils {
     public static Path getCatalinaConfigurationHome() throws SSOException {
         return Paths.
                 get(getCatalinaBase().toString(), SSOConstants.SAMLSSOValveConstants.TOMCAT_CONFIGURATION_FOLDER_NAME);
+    }
+
+    /**
+     * Returns true if single-sign-on (SSO) is enabled, else false.
+     * <p>
+     * For this configuration, CATALINA_BASE/conf/wso2/wso2as-web.xml is checked.
+     *
+     * @return true if single-sign-on (SSO) is enabled, else false
+     * @throws SSOException if an error occurs when parsing the wso2as-web.xml file
+     */
+    public static boolean singleSignOnEnabled() throws SSOException {
+        Path configurationFile = Paths.
+                get(getCatalinaConfigurationHome().toString(),
+                        SSOConstants.SAMLSSOValveConstants.WSO2_CONFIGURATION_FOLDER_NAME,
+                        SSOConstants.SAMLSSOValveConstants.WSO2AS_CONFIG_FILE_NAME);
+        DocumentBuilder docBuilder = getDocumentBuilder(false, true, new XMLEntityResolver());
+        Document document;
+        try {
+            document = docBuilder.parse(Files.newInputStream(configurationFile));
+        } catch (SAXException | IOException e) {
+            throw new SSOException("Error when parsing the " + configurationFile + " file");
+        }
+        Element rootElement = document.getDocumentElement();
+        NodeList ssoEnabled = rootElement.getElementsByTagName("wwc:single-sign-on");
+        return ((ssoEnabled.item(0).getNodeType() == Node.ELEMENT_NODE) && (Boolean.
+                parseBoolean((ssoEnabled.item(0)).getTextContent())));
     }
 
     /**
@@ -129,5 +166,35 @@ public class SSOUtils {
      */
     public static boolean isCollectionEmpty(Collection collection) {
         return ((!Optional.ofNullable(collection).isPresent()) || (collection.isEmpty()));
+    }
+
+    /**
+     * Generates a {@code javax.xml.parsers.DocumentBuilder} instance based on the specified configurations.
+     *
+     * @param expandEntityReferences true if the parser is to expand entity reference nodes, else false
+     * @param namespaceAware         true if the parser provides support for XML namespaces, else false
+     * @param entityResolver         the {@link EntityResolver} to be used within the parser
+     * @return the generated {@link javax.xml.parsers.DocumentBuilder} instance
+     * @throws SSOException if an error occurs when generating the new DocumentBuilder
+     */
+    public static DocumentBuilder getDocumentBuilder(boolean expandEntityReferences, boolean namespaceAware,
+            EntityResolver entityResolver) throws SSOException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        if (!expandEntityReferences) {
+            documentBuilderFactory.setExpandEntityReferences(false);
+        }
+        if (namespaceAware) {
+            documentBuilderFactory.setNamespaceAware(true);
+        }
+
+        DocumentBuilder docBuilder;
+        try {
+            docBuilder = documentBuilderFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            throw new SSOException("Error when generating the new DocumentBuilder", e);
+        }
+        docBuilder.setEntityResolver(entityResolver);
+
+        return docBuilder;
     }
 }

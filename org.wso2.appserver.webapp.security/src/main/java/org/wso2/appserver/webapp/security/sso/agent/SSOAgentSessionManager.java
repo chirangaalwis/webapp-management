@@ -16,7 +16,7 @@
 package org.wso2.appserver.webapp.security.sso.agent;
 
 import org.wso2.appserver.webapp.security.sso.SSOConstants;
-import org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean;
+import org.wso2.appserver.webapp.security.sso.bean.LoggedInSession;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,7 +56,7 @@ public class SSOAgentSessionManager {
      * @return set of sessions associated with the session index
      */
     public static Set<HttpSession> invalidateAllSessions(HttpSession session) {
-        LoggedInSessionBean sessionBean = (LoggedInSessionBean) session.
+        LoggedInSession sessionBean = (LoggedInSession) session.
                 getAttribute(SSOConstants.SESSION_BEAN_NAME);
         Set<HttpSession> sessions = new HashSet<>();
         if ((Optional.ofNullable(sessionBean).isPresent()) && (Optional.ofNullable(sessionBean.getSAML2SSO()).
@@ -90,7 +90,7 @@ public class SSOAgentSessionManager {
      */
     public static void addAuthenticatedSession(HttpSession session) {
         Optional<String> sessionIndex = Optional.
-                ofNullable(((LoggedInSessionBean) session.getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+                ofNullable(((LoggedInSession) session.getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                         getSessionIndex());
 
         if (Optional.ofNullable(getSSOSessionsMap().get(sessionIndex.get())).isPresent()) {

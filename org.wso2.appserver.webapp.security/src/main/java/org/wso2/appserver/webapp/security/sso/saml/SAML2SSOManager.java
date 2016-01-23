@@ -55,9 +55,10 @@ import org.wso2.appserver.webapp.security.sso.SSOException;
 import org.wso2.appserver.webapp.security.sso.SSOUtils;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentConfiguration;
 import org.wso2.appserver.webapp.security.sso.agent.SSOAgentSessionManager;
-import org.wso2.appserver.webapp.security.sso.bean.LoggedInSessionBean;
+import org.wso2.appserver.webapp.security.sso.bean.LoggedInSession;
+import org.wso2.appserver.webapp.security.sso.saml.signature.SignatureValidator;
+import org.wso2.appserver.webapp.security.sso.saml.signature.X509CredentialImplementation;
 import org.wso2.appserver.webapp.security.sso.util.SSOAgentDataHolder;
-import org.wso2.appserver.webapp.security.sso.util.SignatureValidator;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -129,7 +130,7 @@ public class SAML2SSOManager {
                                         ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
             }
         } else {
-            LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
+            LoggedInSession sessionBean = (LoggedInSession) request.getSession(false).
                     getAttribute(SSOConstants.SESSION_BEAN_NAME);
             if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
@@ -356,8 +357,8 @@ public class SAML2SSOManager {
      * @throws SSOException if the received SAML 2.0 Response is invalid
      */
     private void processSingleSignInResponse(HttpServletRequest request) throws SSOException {
-        LoggedInSessionBean sessionBean = new LoggedInSessionBean();
-        sessionBean.setSAML2SSO(new LoggedInSessionBean.SAML2SSO());
+        LoggedInSession sessionBean = new LoggedInSession();
+        sessionBean.setSAML2SSO(new LoggedInSession.SAML2SSO());
 
         String saml2ResponseString = new String(
                 Base64.decode(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
@@ -427,7 +428,7 @@ public class SAML2SSOManager {
         //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
         sessionBean.getSAML2SSO().setAssertionString(SAMLSSOUtils.marshall(assertion.get()));
 
-        ((LoggedInSessionBean) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
+        ((LoggedInSession) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                 setSubjectAttributes(SAMLSSOUtils.getAssertionStatements(assertion.get()));
 
         //  For removing the session when the single-logout request made by the service provider itself
@@ -437,7 +438,7 @@ public class SAML2SSOManager {
             if (!sessionId.isPresent()) {
                 throw new SSOException("Single Logout is enabled but IdP Session ID not found in SAML2 Assertion");
             }
-            ((LoggedInSessionBean) request.getSession().
+            ((LoggedInSession) request.getSession().
                     getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().setSessionIndex(sessionId.get());
             SSOAgentSessionManager.addAuthenticatedSession(request.getSession(false));
         }
@@ -630,7 +631,7 @@ public class SAML2SSOManager {
         if (!isLogout) {
             requestMessage = buildAuthnRequest(request);
         } else {
-            LoggedInSessionBean sessionBean = (LoggedInSessionBean) request.getSession(false).
+            LoggedInSession sessionBean = (LoggedInSession) request.getSession(false).
                     getAttribute(SSOConstants.SESSION_BEAN_NAME);
             if (Optional.ofNullable(sessionBean).isPresent()) {
                 requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),

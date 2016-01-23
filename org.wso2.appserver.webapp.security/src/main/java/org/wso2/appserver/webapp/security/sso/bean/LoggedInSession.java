@@ -29,11 +29,11 @@ import java.util.Optional;
 import javax.xml.bind.annotation.XmlAttribute;
 
 /**
- * A Java Bean class which represents a user logged-in session.
+ * A Java bean class which represents a user logged-in session.
  *
  * @since 6.0.0
  */
-public class LoggedInSessionBean implements Serializable {
+public class LoggedInSession implements Serializable {
     private static final long serialVersionUID = 1639369078633501892L;
     private static final String emptyString = "";
 
@@ -68,38 +68,6 @@ public class LoggedInSessionBean implements Serializable {
         @XmlAttribute(name = "expires_in")
         @SerializedName("expires_in")
         private String expiresIn;
-
-        public String getAccessToken() {
-            return accessToken;
-        }
-
-        public void setAccessToken(String accessToken) {
-            this.accessToken = accessToken;
-        }
-
-        public String getRefreshToken() {
-            return refreshToken;
-        }
-
-        public void setRefreshToken(String refreshToken) {
-            this.refreshToken = refreshToken;
-        }
-
-        public String getTokenType() {
-            return tokenType;
-        }
-
-        public void setTokenType(String tokenType) {
-            this.tokenType = tokenType;
-        }
-
-        public String getExpiresIn() {
-            return expiresIn;
-        }
-
-        public void setExpiresIn(String expiresIn) {
-            this.expiresIn = expiresIn;
-        }
 
         /**
          * Serializes this {@code AccessTokenResponseBean} object to its JSON representation.
@@ -148,10 +116,6 @@ public class LoggedInSessionBean implements Serializable {
             this.subjectId = subjectId;
         }
 
-        public Map<String, String> getSubjectAttributes() {
-            return subjectAttributes;
-        }
-
         public void setSubjectAttributes(Map<String, String> samlSSOAttributes) {
             this.subjectAttributes = samlSSOAttributes;
         }
@@ -164,105 +128,82 @@ public class LoggedInSessionBean implements Serializable {
             this.sessionIndex = sessionIndex;
         }
 
-        public Response getSAMLResponse() {
-            return response;
-        }
-
         public void setSAMLResponse(Response samlResponse) {
             this.response = samlResponse;
-        }
-
-        public String getResponseString() {
-            return responseString;
         }
 
         public void setResponseString(String responseString) {
             this.responseString = responseString;
         }
 
-        public Assertion getAssertion() {
-            return assertion;
-        }
-
         public void setAssertion(Assertion samlAssertion) {
             this.assertion = samlAssertion;
-        }
-
-        public String getAssertionString() {
-            return assertionString;
         }
 
         public void setAssertionString(String samlAssertionString) {
             this.assertionString = samlAssertionString;
         }
 
-        public AccessTokenResponseBean getAccessTokenResponseBean() {
-            return accessTokenResponseBean;
-        }
-
-        public void setAccessTokenResponseBean(AccessTokenResponseBean accessTokenResponseBean) {
-            this.accessTokenResponseBean = accessTokenResponseBean;
-        }
-
         //  These are the two default methods which would be executed during the serialization and deserialization
-        //  process of a LoggedInSessionBean instance
+        //  process of a LoggedInSession instance
 
         /**
-         * Writes this {@code LoggedInSessionBean} instance to the specified {@code ObjectOutputStream}.
+         * Writes this {@code LoggedInSession} instance to the specified {@code ObjectOutputStream}.
          * <p>
          * This is the default {@code writeObject} method executed during the serialization process of this instance.
          *
-         * @param stream the {@link java.io.ObjectOutputStream} to which this LoggedInSessionBean instance is to be
+         * @param stream the {@link java.io.ObjectOutputStream} to which this LoggedInSession instance is to be
          *               written
          * @throws IOException if there are I/O errors while writing to the underlying stream
          */
         private void writeObject(java.io.ObjectOutputStream stream) throws IOException {
-            stream.writeObject(getSubjectId());
-            stream.writeObject(getResponseString());
-            stream.writeObject(getAssertionString());
-            stream.writeObject(getSessionIndex());
-            if (Optional.ofNullable(getAccessTokenResponseBean()).isPresent()) {
-                stream.writeObject(getAccessTokenResponseBean().serialize());
+            stream.writeObject(subjectId);
+            stream.writeObject(responseString);
+            stream.writeObject(assertionString);
+            stream.writeObject(sessionIndex);
+            if (Optional.ofNullable(accessTokenResponseBean).isPresent()) {
+                stream.writeObject(accessTokenResponseBean.serialize());
             } else {
                 stream.writeObject(emptyString);
             }
-            stream.writeObject(getSubjectAttributes());
+            stream.writeObject(subjectAttributes);
         }
 
         /**
-         * Reads this {@code LoggedInSessionBean} instance to the specified {@code ObjectInputStream}.
+         * Reads this {@code LoggedInSession} instance to the specified {@code ObjectInputStream}.
          * <p>
          * This is the default {@code readObject} method executed during the deSerialization process of this instance.
          *
-         * @param stream the serialized {@link java.io.ObjectInputStream} from which the LoggedInSessionBean instance is
+         * @param stream the serialized {@link java.io.ObjectInputStream} from which the LoggedInSession instance is
          *               to be read
          * @throws IOException            if I/O errors occurred while reading from the underlying stream
          * @throws ClassNotFoundException if class definition of a serialized object is not found
          * @throws SSOException           if an error occurs during unmarshalling
          */
+        @SuppressWarnings("unchecked")
         private void readObject(java.io.ObjectInputStream stream)
                 throws IOException, ClassNotFoundException, SSOException {
-            setSubjectId((String) stream.readObject());
+            subjectId = (String) stream.readObject();
 
-            setResponseString((String) stream.readObject());
-            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!emptyString.equals(getResponseString()))) {
-                setSAMLResponse((Response) SAMLSSOUtils.unmarshall(getResponseString()));
+            responseString = (String) stream.readObject();
+            if ((Optional.ofNullable(responseString).isPresent()) && (!emptyString.equals(responseString))) {
+                response = (Response) SAMLSSOUtils.unmarshall(responseString);
             }
 
             setAssertionString((String) stream.readObject());
-            if ((Optional.ofNullable(getResponseString()).isPresent()) && (!emptyString.
-                    equals(getAssertionString()))) {
-                setAssertion((Assertion) SAMLSSOUtils.unmarshall(assertionString));
+            if ((Optional.ofNullable(responseString).isPresent()) && (!emptyString.
+                    equals(assertionString))) {
+                assertion = (Assertion) SAMLSSOUtils.unmarshall(assertionString);
             }
 
-            setSessionIndex((String) stream.readObject());
+            sessionIndex = (String) stream.readObject();
             String accessTokenResponseBeanString = (String) stream.readObject();
             if (!emptyString.equals(accessTokenResponseBeanString)) {
-                setAccessTokenResponseBean(getAccessTokenResponseBean().deSerialize(accessTokenResponseBeanString));
+                accessTokenResponseBean = accessTokenResponseBean.deSerialize(accessTokenResponseBeanString);
             } else {
-                setAccessTokenResponseBean(null);
+                accessTokenResponseBean = null;
             }
-            setSubjectAttributes((Map<String, String>) stream.readObject());
+            subjectAttributes = (Map<String, String>) stream.readObject();
         }
     }
 }
