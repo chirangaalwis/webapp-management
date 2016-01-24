@@ -77,7 +77,7 @@ public class SAMLSSOValve extends SingleSignOn {
         logger.log(Level.FINE, "Invoking SAMLSSOValve. Request URI : " + request.getRequestURI());
 
         //  Checks if single-sign-on feature is enabled
-        if (!SSOUtils.singleSignOnEnabled()) {
+        if ((request.getRequest().getRequestURI().equals("/")) || ((!SSOUtils.singleSignOnEnabled()))) {
             logger.log(Level.FINE, "SAML2 SSO not enabled in webapp " + request.getContext().getName());
             //  Moves onto the next valve, if single-sign-on is not enabled
             getNext().invoke(request, response);
