@@ -17,6 +17,7 @@ package org.wso2.appserver.webapp.security.sso.saml;
 
 import org.apache.xml.security.Init;
 import org.apache.xml.security.c14n.Canonicalizer;
+import org.apache.xml.security.signature.XMLSignature;
 import org.opensaml.Configuration;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
@@ -70,11 +71,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -201,8 +204,8 @@ public class SAMLSSOUtils {
             //  Marshall this element, and its children, and root them in a newly created Document
             authDOM = marshaller.marshall(requestMessage);
         } catch (MarshallingException e) {
-            throw new SSOException("Error occurred while encoding SAML2 request, failed to marshall the SAML 2.0. " +
-                    "Request element XMLObject to its corresponding W3C DOM element", e);
+            throw new SSOException("Error occurred while encoding SAML2 request, failed to marshall the SAML 2.0. "
+                    + "Request element XMLObject to its corresponding W3C DOM element", e);
         }
 
         StringWriter writer = new StringWriter();
@@ -216,10 +219,15 @@ public class SAMLSSOUtils {
             try (DeflaterOutputStream deflaterOutputStream = new DeflaterOutputStream(byteArrayOutputStream,
                     deflater)) {
                 deflaterOutputStream.write(writer.toString().getBytes(Charset.forName("UTF-8")));
-                String encodedRequestMessage = Base64.
-                        encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
-                return URLEncoder.encode(encodedRequestMessage, "UTF-8").trim();
             } catch (IOException e) {
+                throw new SSOException("Error occurred while deflate encoding SAML2 request", e);
+            }
+
+            String encodedRequestMessage = Base64.
+                    encodeBytes(byteArrayOutputStream.toByteArray(), Base64.DONT_BREAK_LINES);
+            try {
+                return URLEncoder.encode(encodedRequestMessage, "UTF-8").trim();
+            } catch (UnsupportedEncodingException e) {
                 throw new SSOException("Error occurred while encoding SAML2 request", e);
             }
         } else if (SAMLConstants.SAML2_POST_BINDING_URI.equals(binding)) {
@@ -467,5 +475,33 @@ public class SAMLSSOUtils {
         }
         return builder.buildObject(objectQualifiedName.getNamespaceURI(), objectQualifiedName.getLocalPart(),
                 objectQualifiedName.getPrefix());
+    }
+
+    /**
+     * Appends the XML Digital Signature encoded via deflate compression to the specified query string.
+     *
+     * @param httpQueryString the HTTP query string to which the decoded content is to be appended
+     * @param credential      an entity credential associated with X.509 Public Key Infrastructure
+     * @throws SSOException if an error occurs while applying the SAML 2.0 Redirect binding signature
+     */
+    protected static void addDeflateSignatureToHTTPQueryString(StringBuilder httpQueryString, X509Credential credential)
+            throws SSOException {
+        doBootstrap();
+        try {
+            httpQueryString.append("&SigAlg=").
+                    append(URLEncoder.encode(XMLSignature.ALGO_ID_SIGNATURE_RSA, "UTF-8").trim());
+
+            java.security.Signature signature = java.security.Signature.getInstance("SHA1withRSA");
+            signature.initSign(credential.getPrivateKey());
+            signature.update(httpQueryString.toString().getBytes(Charset.forName("UTF-8")));
+            byte[] signatureByteArray = signature.sign();
+
+            String signatureBase64encodedString = Base64.encodeBytes(signatureByteArray, Base64.DONT_BREAK_LINES);
+            httpQueryString.append("&Signature=").
+                    append(URLEncoder.encode(signatureBase64encodedString, "UTF-8").trim());
+        } catch (NoSuchAlgorithmException | InvalidKeyException |
+                java.security.SignatureException | UnsupportedEncodingException e) {
+            throw new SSOException("Error applying SAML 2.0 Redirect Binding signature", e);
+        }
     }
 }

@@ -50,6 +50,12 @@ public class SSOUtils {
     private static final Random random = new Random();
 
     /**
+     * Prevents instantiating the SSOUtils utility class
+     */
+    private SSOUtils() {
+    }
+
+    /**
      * Returns a {@code Path} instance representing the base of Apache Tomcat instances.
      *
      * @return a {@link Path} instance representing the base of Apache Tomcat instances
@@ -78,7 +84,7 @@ public class SSOUtils {
     /**
      * Returns true if single-sign-on (SSO) is enabled, else false.
      * <p>
-     * For this configuration, CATALINA_BASE/conf/wso2/wso2as-web.xml is checked.
+     * For this configuration, CATALINA_BASE/conf/wso2/wso2as-web.xml file is checked.
      *
      * @return true if single-sign-on (SSO) is enabled, else false
      * @throws SSOException if an error occurs when parsing the wso2as-web.xml file
@@ -96,7 +102,8 @@ public class SSOUtils {
             throw new SSOException("Error when parsing the " + configurationFile + " file");
         }
         Element rootElement = document.getDocumentElement();
-        NodeList ssoEnabled = rootElement.getElementsByTagName("wwc:single-sign-on");
+        NodeList ssoEnabled = rootElement.
+                getElementsByTagName(SSOConstants.SAMLSSOValveConstants.SINGLE_SIGN_ON_CONFIG_TAG_NAME);
         return ((ssoEnabled.item(0).getNodeType() == Node.ELEMENT_NODE) && (Boolean.
                 parseBoolean((ssoEnabled.item(0)).getTextContent())));
     }

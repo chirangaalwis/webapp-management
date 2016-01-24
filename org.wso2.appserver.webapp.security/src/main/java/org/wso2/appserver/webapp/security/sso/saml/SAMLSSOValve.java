@@ -122,7 +122,6 @@ public class SAMLSSOValve extends SingleSignOn {
             }
 
             SAML2SSOManager saml2SSOManager;
-
             if (requestResolver.isSAML2SLORequest()) {
                 //  Handles single logout request from the identity provider
                 logger.log(Level.FINE, "Processing Single Log Out Request...");
@@ -185,8 +184,6 @@ public class SAMLSSOValve extends SingleSignOn {
                         response.sendRedirect(request.getContext().getPath());
                     }
                 } else {
-                    //  If "SSOConstants.HTTP_BINDING_PARAM" is not defined, default to redirect
-                    //  TODO: TO BE TESTED
                     ssoAgentConfiguration.getSAML2().setPassiveAuthn(false);
                     response.sendRedirect(saml2SSOManager.buildRedirectRequest(request, true));
                 }
@@ -214,7 +211,6 @@ public class SAMLSSOValve extends SingleSignOn {
                     String htmlPayload = saml2SSOManager.buildPostRequest(request, false);
                     saml2SSOManager.sendCharacterData(response, htmlPayload);
                 } else {
-                    //  TODO: test redirect
                     response.sendRedirect(saml2SSOManager.buildRedirectRequest(request, false));
                 }
                 return;

@@ -103,12 +103,14 @@ public class SSOConstants {
      */
     public static class SAMLSSOValveConstants {
         //  Environmental variable property name constant
-        public static final String CATALINA_BASE = "catalina.base";
+        protected static final String CATALINA_BASE = "catalina.base";
+        //  SSO configuration XML element tag name
+        protected static final String SINGLE_SIGN_ON_CONFIG_TAG_NAME = "wwc:single-sign-on";
         //  File path related constants
-        public static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
-        public static final String WSO2_CONFIGURATION_FOLDER_NAME = "wso2";
+        protected static final String TOMCAT_CONFIGURATION_FOLDER_NAME = "conf";
+        protected static final String WSO2_CONFIGURATION_FOLDER_NAME = "wso2";
+        protected static final String WSO2AS_CONFIG_FILE_NAME = "wso2as-web.xml";
         public static final String SSO_CONFIG_FILE_NAME = "sso-sp-config.properties";
-        public static final String WSO2AS_CONFIG_FILE_NAME = "wso2as-web.xml";
         //  HTTP servlet request session notes' property name and attribute name constants
         public static final String SSO_AGENT_CONFIG = "SSOAgentConfig";
         public static final String REQUEST_PARAM_MAP = "REQUEST_PARAM_MAP";

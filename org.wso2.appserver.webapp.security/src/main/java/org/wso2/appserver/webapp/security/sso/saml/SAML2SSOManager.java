@@ -130,11 +130,11 @@ public class SAML2SSOManager {
                                         ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
             }
         } else {
-            LoggedInSession sessionBean = (LoggedInSession) request.getSession(false).
+            LoggedInSession session = (LoggedInSession) request.getSession(false).
                     getAttribute(SSOConstants.SESSION_BEAN_NAME);
-            if (Optional.ofNullable(sessionBean).isPresent()) {
-                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
-                        sessionBean.getSAML2SSO().getSessionIndex());
+            if (Optional.ofNullable(session).isPresent()) {
+                requestMessage = buildLogoutRequest(session.getSAML2SSO().getSubjectId(),
+                        session.getSAML2SSO().getSessionIndex());
                 if (ssoAgentConfiguration.getSAML2().isRequestSigned()) {
                     requestMessage = SAMLSSOUtils.
                             setSignature((LogoutRequest) requestMessage, XMLSignature.ALGO_ID_SIGNATURE_RSA,
@@ -193,6 +193,70 @@ public class SAML2SSOManager {
             htmlPayload = htmlPayload.replace("<!--$saml_params-->", htmlParameters.toString());
         }
         return htmlPayload;
+    }
+
+    /**
+     * Handles the request for HTTP Redirect binding.
+     *
+     * @param request  the HTTP servlet request
+     * @param isLogout true if request is a logout request, else false
+     * @return the identity provider URL with the appropriate query string appended
+     * @throws SSOException if an error occurs when generating the HTTP Redirect binding request
+     */
+    public String buildRedirectRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
+        RequestAbstractType requestMessage;
+        if (!isLogout) {
+            requestMessage = buildAuthnRequest(request);
+        } else {
+            Optional<LoggedInSession> session = Optional.ofNullable((LoggedInSession) request.getSession(false).
+                    getAttribute(SSOConstants.SESSION_BEAN_NAME));
+            if (session.isPresent()) {
+                requestMessage = buildLogoutRequest(session.get().getSAML2SSO().getSubjectId(),
+                        session.get().getSAML2SSO().getSessionIndex());
+            } else {
+                throw new SSOException("Single Logout Request can not be built, single-sign-on session is null");
+            }
+        }
+        String idpUrl;
+        String encodedRequestMessage = SAMLSSOUtils.
+                encodeRequestMessage(requestMessage, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
+        StringBuilder httpQueryString = new StringBuilder(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST +
+                "=" + encodedRequestMessage);
+
+        String relayState = ssoAgentConfiguration.getSAML2().getRelayState();
+        if (Optional.ofNullable(relayState).isPresent()) {
+            try {
+                httpQueryString.append("&").append(RelayState.DEFAULT_ELEMENT_LOCAL_NAME).append("=").
+                        append(URLEncoder.encode(relayState, "UTF-8").trim());
+            } catch (UnsupportedEncodingException e) {
+                throw new SSOException("Error occurred while URLEncoding " + RelayState.DEFAULT_ELEMENT_LOCAL_NAME, e);
+            }
+        }
+
+        //  Add any additional parameters defined
+        if ((Optional.ofNullable(ssoAgentConfiguration.getQueryParameters()).isPresent()) && (!ssoAgentConfiguration.
+                getQueryParameters().isEmpty())) {
+            StringBuilder builder = new StringBuilder();
+            ssoAgentConfiguration.getQueryParameters().entrySet().stream().
+                    filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
+                            ofNullable(entry.getValue()).isPresent()) && (entry.getValue().length > 0))).
+                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
+                            forEach(parameter -> builder.append("&").append(filteredEntry.getKey()).
+                                    append("=").append(parameter)));
+            httpQueryString.append(builder);
+        }
+
+        if (ssoAgentConfiguration.getSAML2().isRequestSigned()) {
+            SAMLSSOUtils.addDeflateSignatureToHTTPQueryString(httpQueryString,
+                    new X509CredentialImplementation(ssoAgentConfiguration.getSAML2().getSSOAgentX509Credential()));
+        }
+
+        if (ssoAgentConfiguration.getSAML2().getIdPURL().contains("?")) {
+            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
+        } else {
+            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
+        }
+        return idpUrl;
     }
 
     /**
@@ -357,15 +421,15 @@ public class SAML2SSOManager {
      * @throws SSOException if the received SAML 2.0 Response is invalid
      */
     private void processSingleSignInResponse(HttpServletRequest request) throws SSOException {
-        LoggedInSession sessionBean = new LoggedInSession();
-        sessionBean.setSAML2SSO(new LoggedInSession.SAML2SSO());
+        LoggedInSession session = new LoggedInSession();
+        session.setSAML2SSO(new LoggedInSession.SAML2SSO());
 
         String saml2ResponseString = new String(
                 Base64.decode(request.getParameter(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESPONSE)),
                 Charset.forName("UTF-8"));
         Response saml2Response = (Response) SAMLSSOUtils.unmarshall(saml2ResponseString);
-        sessionBean.getSAML2SSO().setResponseString(saml2ResponseString);
-        sessionBean.getSAML2SSO().setSAMLResponse(saml2Response);
+        session.getSAML2SSO().setResponseString(saml2ResponseString);
+        session.getSAML2SSO().setSAMLResponse(saml2Response);
 
         Optional<Assertion> assertion = Optional.empty();
         if (ssoAgentConfiguration.getSAML2().isAssertionEncrypted()) {
@@ -402,7 +466,7 @@ public class SAML2SSOManager {
         } else if (!idPEntityIdValue.get().equals(ssoAgentConfiguration.getSAML2().getIdPEntityId())) {
             throw new SSOException("SAML2 Response Issuer verification failed");
         }
-        sessionBean.getSAML2SSO().setAssertion(assertion.get());
+        session.getSAML2SSO().setAssertion(assertion.get());
         //  Cannot marshall SAML assertion here, before signature validation due to an issue in OpenSAML
 
         //  Gets the subject name from the Response Object and forward it to login_action.jsp
@@ -416,8 +480,8 @@ public class SAML2SSOManager {
         }
 
         //  Sets the subject in the session bean
-        sessionBean.getSAML2SSO().setSubjectId(subject.get());
-        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
+        session.getSAML2SSO().setSubjectId(subject.get());
+        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, session);
 
         //  Validates the audience restriction
         validateAudienceRestriction(assertion.get());
@@ -426,7 +490,7 @@ public class SAML2SSOManager {
         validateSignature(saml2Response, assertion.get());
 
         //  Marshalling SAML2 assertion after signature validation due to a weird issue in OpenSAML
-        sessionBean.getSAML2SSO().setAssertionString(SAMLSSOUtils.marshall(assertion.get()));
+        session.getSAML2SSO().setAssertionString(SAMLSSOUtils.marshall(assertion.get()));
 
         ((LoggedInSession) request.getSession().getAttribute(SSOConstants.SESSION_BEAN_NAME)).getSAML2SSO().
                 setSubjectAttributes(SAMLSSOUtils.getAssertionStatements(assertion.get()));
@@ -443,7 +507,7 @@ public class SAML2SSOManager {
             SSOAgentSessionManager.addAuthenticatedSession(request.getSession(false));
         }
 
-        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, sessionBean);
+        request.getSession().setAttribute(SSOConstants.SESSION_BEAN_NAME, session);
     }
 
     /**
@@ -623,61 +687,5 @@ public class SAML2SSOManager {
         logoutRequest.setReason("Single Logout");
 
         return logoutRequest;
-    }
-
-    //  TODO: WRITE JAVADOCS AND TEST
-    public String buildRedirectRequest(HttpServletRequest request, boolean isLogout) throws SSOException {
-        RequestAbstractType requestMessage;
-        if (!isLogout) {
-            requestMessage = buildAuthnRequest(request);
-        } else {
-            LoggedInSession sessionBean = (LoggedInSession) request.getSession(false).
-                    getAttribute(SSOConstants.SESSION_BEAN_NAME);
-            if (Optional.ofNullable(sessionBean).isPresent()) {
-                requestMessage = buildLogoutRequest(sessionBean.getSAML2SSO().getSubjectId(),
-                        sessionBean.getSAML2SSO().getSessionIndex());
-            } else {
-                throw new SSOException("SLO Request can not be built. SSO Session is null.");
-            }
-        }
-
-        String idpUrl;
-        String encodedRequestMessage = SAMLSSOUtils.
-                encodeRequestMessage(requestMessage, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
-        StringBuilder httpQueryString = new StringBuilder(SSOConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_REQUEST +
-                "=" + encodedRequestMessage);
-
-        String relayState = ssoAgentConfiguration.getSAML2().getRelayState();
-        if (Optional.ofNullable(relayState).isPresent()) {
-            try {
-                httpQueryString.append("&").append(RelayState.DEFAULT_ELEMENT_LOCAL_NAME).append("=").
-                        append(URLEncoder.encode(relayState, "UTF-8").trim());
-            } catch (UnsupportedEncodingException e) {
-                throw new SSOException("Error occurred while URLEncoding " + RelayState.DEFAULT_ELEMENT_LOCAL_NAME, e);
-            }
-        }
-
-        //  Add any additional parameters defined
-        if ((Optional.ofNullable(ssoAgentConfiguration.getQueryParameters()).isPresent()) && (!ssoAgentConfiguration.
-                getQueryParameters().isEmpty())) {
-            StringBuilder builder = new StringBuilder();
-            ssoAgentConfiguration.getQueryParameters().entrySet().stream().
-                    filter(entry -> ((Optional.ofNullable(entry.getKey()).isPresent()) && (Optional.
-                            ofNullable(entry.getValue()).
-                            isPresent()) && (entry.getValue().length > 0))).
-                    forEach(filteredEntry -> Stream.of(filteredEntry.getValue()).
-                            forEach(parameter -> builder.append("&").append(filteredEntry.getKey()).
-                                    append("=").append(parameter)));
-            httpQueryString.append(builder);
-        }
-
-        //  TODO: CONSIDER DIGITAL SIGNING
-
-        if (ssoAgentConfiguration.getSAML2().getIdPURL().contains("?")) {
-            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
-        } else {
-            idpUrl = ssoAgentConfiguration.getSAML2().getIdPURL().concat("?").concat(httpQueryString.toString());
-        }
-        return idpUrl;
     }
 }
