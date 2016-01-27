@@ -28,10 +28,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
@@ -47,10 +47,10 @@ import javax.xml.parsers.ParserConfigurationException;
  */
 public class SSOUtils {
     private static final Logger logger = Logger.getLogger(SSOUtils.class.getName());
-    private static final Random random = new Random();
+    private static final SecureRandom random = new SecureRandom();
 
     /**
-     * Prevents instantiating the SSOUtils utility class
+     * Prevents instantiating the SSOUtils utility class.
      */
     private SSOUtils() {
     }
@@ -94,7 +94,7 @@ public class SSOUtils {
                 get(getCatalinaConfigurationHome().toString(),
                         SSOConstants.SAMLSSOValveConstants.WSO2_CONFIGURATION_FOLDER_NAME,
                         SSOConstants.SAMLSSOValveConstants.WSO2AS_CONFIG_FILE_NAME);
-        DocumentBuilder docBuilder = getDocumentBuilder(false, true, new XMLEntityResolver());
+        DocumentBuilder docBuilder = getDocumentBuilder(false, true, Optional.of(new XMLEntityResolver()));
         Document document;
         try {
             document = docBuilder.parse(Files.newInputStream(configurationFile));
@@ -130,9 +130,9 @@ public class SSOUtils {
     }
 
     /**
-     * Generates a unique id for authentication requests.
+     * Generates a unique id for SAML 2.0 based tokens.
      *
-     * @return a unique id for authentication requests
+     * @return a unique id for SAML 2.0 based tokens
      */
     public static String createID() {
         byte[] bytes = new byte[20]; // 160 bit
@@ -180,12 +180,13 @@ public class SSOUtils {
      *
      * @param expandEntityReferences true if the parser is to expand entity reference nodes, else false
      * @param namespaceAware         true if the parser provides support for XML namespaces, else false
-     * @param entityResolver         the {@link EntityResolver} to be used within the parser
+     * @param entityResolver         the {@link EntityResolver} to be used within the parser, if {@code entityResolver}
+     *                               is set to null default implementation is used
      * @return the generated {@link javax.xml.parsers.DocumentBuilder} instance
      * @throws SSOException if an error occurs when generating the new DocumentBuilder
      */
     public static DocumentBuilder getDocumentBuilder(boolean expandEntityReferences, boolean namespaceAware,
-            EntityResolver entityResolver) throws SSOException {
+            Optional<EntityResolver> entityResolver) throws SSOException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         if (!expandEntityReferences) {
             documentBuilderFactory.setExpandEntityReferences(false);
@@ -200,7 +201,7 @@ public class SSOUtils {
         } catch (ParserConfigurationException e) {
             throw new SSOException("Error when generating the new DocumentBuilder", e);
         }
-        docBuilder.setEntityResolver(entityResolver);
+        entityResolver.ifPresent(docBuilder::setEntityResolver);
 
         return docBuilder;
     }
