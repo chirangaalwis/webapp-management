@@ -109,6 +109,12 @@ public class SAMLSSOUtils {
     private static boolean isBootStrapped;
 
     /**
+     * Prevents instantiating the SAMLSSOUtils class.
+     */
+    private SAMLSSOUtils() {
+    }
+
+    /**
      * Returns a unique id value for the SAML 2.0 service provider application based on its context path.
      * <p>
      * An {@code Optional String} id is returned based on the context path provided.
@@ -204,8 +210,8 @@ public class SAMLSSOUtils {
             //  Marshall this element, and its children, and root them in a newly created Document
             authDOM = marshaller.marshall(requestMessage);
         } catch (MarshallingException e) {
-            throw new SSOException("Error occurred while encoding SAML2 request, failed to marshall the SAML 2.0. "
-                    + "Request element XMLObject to its corresponding W3C DOM element", e);
+            throw new SSOException("Error occurred while encoding SAML2 request, failed to marshall the SAML 2.0. " +
+                    "Request element XMLObject to its corresponding W3C DOM element", e);
         }
 
         StringWriter writer = new StringWriter();
@@ -281,7 +287,7 @@ public class SAMLSSOUtils {
     public static XMLObject unmarshall(String xmlString) throws SSOException {
         doBootstrap();
         try {
-            DocumentBuilder docBuilder = SSOUtils.getDocumentBuilder(false, true, new XMLEntityResolver());
+            DocumentBuilder docBuilder = SSOUtils.getDocumentBuilder(false, true, Optional.of(new XMLEntityResolver()));
             ByteArrayInputStream inputStream = new ByteArrayInputStream(xmlString.getBytes(Charset.forName("UTF-8")));
             Document document = docBuilder.parse(inputStream);
             Element element = document.getDocumentElement();

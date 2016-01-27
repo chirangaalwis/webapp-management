@@ -21,14 +21,9 @@ package org.wso2.appserver.webapp.security.sso.util;
  * @since 6.0.0
  */
 public class SSOAgentDataHolder {
-    private static SSOAgentDataHolder instance;
+    private static final SSOAgentDataHolder instance = new SSOAgentDataHolder();
 
     private Object object;
-
-    //  a static initialization block
-    static {
-        instance = new SSOAgentDataHolder();
-    }
 
     /**
      * Prevents instantiating the SSOAgentDataHolder class.

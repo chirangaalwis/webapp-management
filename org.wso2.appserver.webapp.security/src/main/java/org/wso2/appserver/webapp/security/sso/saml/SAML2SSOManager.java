@@ -105,7 +105,7 @@ public class SAML2SSOManager {
                         SSOAgentDataHolder.getInstance().
                                 setObject(Class.forName(implClass).newInstance());
                     } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
-                        logger.log(Level.SEVERE, "Error loading custom signature validator class.", e);
+                        logger.log(Level.SEVERE, "Error loading custom signature validator class", e);
                     }
                 }));
     }
